@@ -1,0 +1,7 @@
+numpy==1.23.5
+ipykernel
+pandas
+transformers==4.42.3
+torch==2.1.2
+flash-attn==2.5.7 --no-build-isolation
+evo-model
