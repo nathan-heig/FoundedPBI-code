@@ -1,0 +1,6 @@
+numpy==1.23.5
+torch==2.1.2
+pandas
+h5py
+tqdm
+colorama
