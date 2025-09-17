@@ -49,7 +49,7 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
                 print(f"{id} not found")
                 embed = None
             else:
-                embed = torch.Tensor(f[id][:])
+                embed = torch.Tensor(f[id][:]).flatten()
                 if remove:
                     self.remove_key(id)
 
