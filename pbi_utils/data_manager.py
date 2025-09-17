@@ -18,11 +18,11 @@ class EmbeddingsManager(ABC):
         pass
 
     @abstractmethod
-    def load_embedding(self, id: int, remove: bool = False) -> torch.Tensor | None:
+    def load_embedding(self, id: int, remove: bool = False, device: str = "cpu") -> torch.Tensor | None:
         pass
 
     @abstractmethod
-    def remove_key(self, id: int) -> None:
+    def remove_key(self, id: int, ignore_not_found: bool) -> None:
         pass
 
 class H5pyEmbeddingsManager(EmbeddingsManager):
@@ -40,27 +40,28 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
             if not overwrite and id in f:
                 print(f"{id} already exists, skipping it. To overwrite the value, use overwrite=True")
             else:
+                self.remove_key(id, ignore_not_found=True)
                 f.create_dataset(id, data=data, compression="gzip")
 
-    def load_embedding(self, id: int, remove: bool = False) -> torch.Tensor | None:
+    def load_embedding(self, id: int, remove: bool = False, device:str = "cpu") -> torch.Tensor | None:
         id = str(id) # type: ignore
         with h5py.File(self.file_path, "r") as f:
             if id not in f:
                 print(f"{id} not found")
                 embed = None
             else:
-                embed = torch.Tensor(f[id][:]).flatten()
+                embed = torch.Tensor(f[id][:]).flatten().to(device=device) # type: ignore
                 if remove:
                     self.remove_key(id)
 
         return embed
     
-    def remove_key(self, id: int): 
+    def remove_key(self, id: int, ignore_not_found: bool = False): 
         id = str(id) # type: ignore
         with h5py.File(self.file_path, "a") as f:
             if id in f:
                 del f[id]
-            else:
+            elif not ignore_not_found:
                 print(f"{id} not found")
 
 class InputManager(ABC):
@@ -87,6 +88,7 @@ class PerphectDataInput(InputManager):
 
         # wc = int(subprocess.run([f"cat {self.base_path}*.csv | wc -l"], capture_output=True, shell=True).stdout) # line count of the files, but read_csv does not reach the end idk why
 
+        logger.info("Reading csv files...")
         with tqdm() as bar:
             couples_df = pd.read_csv(self.couples_path, skiprows=lambda x: bar.update(1) and False) # type: ignore
             bacteria_df = pd.read_csv(self.bacteria_path, skiprows=lambda x: bar.update(1) and False) # type: ignore

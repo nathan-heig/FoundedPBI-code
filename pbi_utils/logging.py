@@ -1,4 +1,5 @@
 import logging
+import sys
 from colorama import Fore, Back, Style
 
 DEBUG = logging.DEBUG
@@ -41,12 +42,12 @@ class Logging():
         from utils.logging import Logging, INFO
         Logging.set_logging_level(INFO)
         """
-        logging.basicConfig(level=level)
+        logging.basicConfig(level=level, stream=sys.stdout)
     
     def __create_new_logger(self, level: int, format: str):
         # Logger setup (https://middleware.io/blog/python-logging-format/)
         logger = logging.getLogger(self.name + str(level))
-        console_handler = logging.StreamHandler()
+        console_handler = logging.StreamHandler(stream=sys.stdout)
         formatter = logging.Formatter(fmt=format)
         logger.propagate = False  # To avoid repeated outputs
         console_handler.setFormatter(formatter)
