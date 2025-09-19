@@ -4,38 +4,74 @@ from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, Emb
 from pbi_utils.logging import Logging, INFO, DEBUG
 from pbi_models.megaDNA import MegaDNA
 from pbi_models.classifiers.base import BasicClassifier
-from typing import Tuple
+from pbi_models.abstract_model import AbstractModel
+from typing import Tuple, List
 from sklearn.model_selection import train_test_split
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, Dataset, DataLoader
 import torchmetrics as tm
+import argparse
 
 tqdm.pandas() # Initialize tqdm with pandas
 Logging.set_logging_level(DEBUG)
 logger = Logging(__name__)
 
-def create_embeddings(bacteria_df: pd.DataFrame, phages_df: pd.DataFrame, output_manager: EmbeddingsManager, device: str, overwrite: bool = False):
-    model = MegaDNA(weights_path="./data/weights/megaDNA_phage_145M.pt", device=device)
+def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
+    models = []
+    for model_info in models_list:
+        model_name = model_info[0]
+        if model_name == "MegaDNA":
+            if len(model_info) > 1:
+                weights_path = model_info[1]
+            else:
+                raise ValueError(f"MegaDNA model for bacteria requires a weights path. Usage: `--bacteria-embedding-model MegaDNA path/to/weights.pt`")
+            models.append(MegaDNA(weights_path=weights_path, device=device))
+        else:
+            raise ValueError(f"Unknown bacteria embedding model: {model_name}")
+    return models
 
-    bacteria_df.progress_apply(lambda row: output_manager.save_embedding(row["bacterium_id"], model.embed(row["bacterium_sequence"]), overwrite=overwrite), axis=1) # type: ignore
-    phages_df.progress_apply(lambda row: output_manager.save_embedding(row["phage_id"], model.embed(row["phage_sequence"]), overwrite=overwrite), axis=1) # type: ignore
+def create_embeddings(bacteria_models: List[AbstractModel], phages_models: List[AbstractModel], bacteria_df: pd.DataFrame, phages_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    logger.info(f"Creating embeddings for {len(bacteria_models)} bacteria models and {len(phages_models)} phage models...")
+    # bacteria_encoded has columns: bacterium_id, embedding_MegaDNA, embedding_DNABert, etc.
+    bacteria_embed_names = [f"embedding_{model.name()}" for model in bacteria_models]
+    bacteria_encoded = pd.DataFrame(columns=["bacterium_id"] + bacteria_embed_names)
+    bacteria_encoded["bacterium_id"] = bacteria_df["bacterium_id"]
 
-def load_embeddings(bacteria_df: pd.DataFrame, phages_df: pd.DataFrame, output_manager: EmbeddingsManager, device: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    bacteria_encoded = pd.DataFrame(columns=["bacterium_id", "embedding"])
-    bacteria_encoded[["bacterium_id", "embedding"]] = bacteria_df.progress_apply((lambda row: (row["bacterium_id"], output_manager.load_embedding(row["bacterium_id"], device=device))), axis=1, result_type="expand") # type: ignore
+    # Create all the embeddings for one model and then save them all at once
+    for bacteria_model in tqdm(bacteria_models, unit="models", desc="Creating bacteria embeddings"):
+        bacteria_encoded[f"embedding_{bacteria_model.name()}"] = bacteria_df.progress_apply(lambda row: bacteria_model.embed(row["bacterium_sequence"]), axis=1) # type: ignore
+        output_manager.save_embeddings_batch(bacteria_encoded["bacterium_id"], bacteria_encoded[f"embedding_{bacteria_model.name()}"], model_name=bacteria_model.name(), overwrite=overwrite) # type: ignore
+    
+    # phages_encoded has columns: phage_id, embedding_MegaDNA, embedding_DNABert, etc.
+    phages_embed_names = [f"embedding_{model.name()}" for model in phages_models]
+    phages_encoded = pd.DataFrame(columns=["phage_id"] + phages_embed_names)
+    phages_encoded["phage_id"] = phages_df["phage_id"]
 
-    phages_encoded = pd.DataFrame(columns=["phage_id", "embedding"])
-    phages_encoded[["phage_id", "embedding"]] = phages_df.progress_apply((lambda row: (row["phage_id"], output_manager.load_embedding(row["phage_id"], device=device))), axis=1, result_type="expand") # type: ignore
-
+    # Create all the embeddings for one model and then save them all at once
+    for phages_model in tqdm(phages_models, unit="models", desc="Creating phage embeddings"):
+        phages_encoded[f"embedding_{phages_model.name()}"] = phages_df.progress_apply(lambda row: phages_model.embed(row["phage_sequence"]), axis=1) # type: ignore
+        output_manager.save_embeddings_batch(phages_encoded["phage_id"], phages_encoded[f"embedding_{phages_model.name()}"], model_name=phages_model.name(), overwrite=overwrite) # type: ignore
+    
     return bacteria_encoded, phages_encoded
 
-def make_dataset(couples_df: pd.DataFrame, output_manager: EmbeddingsManager, device: str) -> pd.DataFrame:
+def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phages_model_names: List[str], output_manager: EmbeddingsManager, device: str) -> pd.DataFrame:
     result = couples_df.copy(deep=True)
 
     logger.info(f"Creating dataset (loading embeddings)...")
-    result["bacterium_embedding"] = couples_df.progress_apply(lambda row: output_manager.load_embedding(row["bacterium_id"], device=device), axis=1) # type: ignore
-    result["phage_embedding"] = couples_df.progress_apply(lambda row: output_manager.load_embedding(row["phage_id"], device=device), axis=1) # type: ignore
+
+    bacteria_embeddings = []
+    for bacteria_model in bacteria_model_names: 
+        bacteria_embeddings.append(output_manager.load_embedding_batch(result["bacterium_id"].tolist(), model_name=bacteria_model, device=device))
+    
+    # The embeddings are concatenated to form 1 final embedding per bacterium/phage. 
+    # TODO: One of the papers mentions that you can also simply add them, to reduce the final size, consider testing it.
+    result["bacterium_embedding"] = pd.Series([torch.cat(embeds) for embeds in zip(*bacteria_embeddings)])
+
+    phage_embeddings = []
+    for phage_model in phages_model_names:
+        phage_embeddings.append(output_manager.load_embedding_batch(result["phage_id"].tolist(), model_name=phage_model, device=device))
+    result["phage_embedding"] = pd.Series([torch.cat(embeds) for embeds in zip(*phage_embeddings)])
 
     return result
 
@@ -94,6 +130,7 @@ def train_model(train_df: pd.DataFrame, model: nn.Module, batch_size: int, epoch
     logger.info(f"Loss (train): {loss}")
 
 def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device: str):
+    logger.info(f"Starting testing...")
     dataloader = dataframe_to_tf_dataloader(test_df, batch_size, device)
 
     test_loss = 0.0
@@ -124,16 +161,42 @@ def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device:
     logger.info(f'Loss (test): {test_loss/len(dataloader.dataset)}') # type: ignore
 
 if __name__ == "__main__":
-    bacteria_df, phages_df, couples_df = PerphectDataInput(base_path="data/perphect-data/public_data_set").load()
+    parser = argparse.ArgumentParser()
 
-    output_manager = H5pyEmbeddingsManager("./data/embeddings/megaDNA.h5")
+    # Input data. Only allow 1 type of data input
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument("-i", "--input-perphect", type=str, metavar="INPUT_DIR", help="The path of the folder containing the input data in the Perphect format. The folder must contain the following files: `bacteria_df.csv` (with the columns: `bacterium_id,bacterium_sequence,sequence_length`), `phages_df.csv` (with the columns: `phage_id,phage_sequence,sequence_length`) and `couples_df.csv` (with the columns: `id,bacterium_id,phage_id,interaction_type`, where `interaction_type` is either 1 or 0)")
 
-    # device = "cuda:0"
-    device = "cpu"
+    # Output
+    parser.add_argument("-e", "--embeddings-dir", type=str, default="/data/embeddings/<model>.h5", help="The path of the file where the embeddings are stored and read from (default = data/embeddings/<model>.h5)")
 
-    create_embeddings(bacteria_df, phages_df, output_manager, device=device, overwrite=True)
+    parser.add_argument("--num-gpu", default=0, type=int, help="Number of GPUs available in the system. If 0, the model is run on the CPU (default = 0)")
+    parser.add_argument("--gpu-id", default=0, type=int, help="Index of GPU to be employed (if 'num-gpu' == 1) (default = 0)")
 
-    dataset = make_dataset(couples_df, output_manager, device)
+    # Embedding models. Allow multiple attributes per model
+    parser.add_argument("-pem", "--phages-embedding-model", type=str, nargs="+", required=True, action="append", help="Name and parameters of the embedding model to use for the phages sequences. Use this flag multiple times to use multiple models. To be usede like: `--phages-embedding-model MegaDNA path/to/weights.pt`")
+    parser.add_argument("-bem", "--bacteria-embedding-model", type=str, nargs="+", required=True, action="append", help="Name and parameters of the embedding model to use for the bacteria sequences. Use this flag multiple times to use multiple models. To be usede like: `--phages-embedding-model MegaDNA path/to/weights.pt`")
+
+    args = parser.parse_args()
+
+    logger.debug(f"Arguments: {args}")
+
+    if args.input_perphect is not None:
+        bacteria_df, phages_df, couples_df = PerphectDataInput(base_path=args.input_perphect).load()
+
+    device = "cpu" if args.num_gpu == 0 else f"cuda:{args.gpu_id}"
+
+    output_manager = H5pyEmbeddingsManager(args.embeddings_dir)
+
+    bacteria_model_names = [x[0] for x in args.bacteria_embedding_model]
+    phages_model_names = [x[0] for x in args.phages_embedding_model]
+    
+    # Load embedding models
+    bacteria_models = load_embedding_models(args.bacteria_embedding_model, device=device)
+    phages_models = load_embedding_models(args.phages_embedding_model, device=device)
+    create_embeddings(bacteria_models, phages_models, bacteria_df, phages_df, output_manager, overwrite=True)
+
+    dataset = make_dataset(couples_df, bacteria_model_names, phages_model_names , output_manager, device)
 
     train, test = train_test_split(dataset, test_size=0.2, random_state=42, shuffle=True)
 
