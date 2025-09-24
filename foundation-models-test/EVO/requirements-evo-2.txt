@@ -1,2 +1,2 @@
 # This needs to be installed by hand, before installing evo-model, but after installing torch
-flash-attn==2.6.3 --no-build-isolation
+flash-attn==2.6.3 --global-option="--no-build-isolation"
