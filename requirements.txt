@@ -6,4 +6,7 @@ tqdm
 colorama
 scikit-learn
 torchmetrics
+
 git+https://github.com/lingxusb/megaDNA@main
+
+transformers==4.42.3

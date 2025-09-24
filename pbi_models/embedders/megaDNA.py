@@ -1,4 +1,4 @@
-from pbi_models.abstract_model import AbstractModel
+from pbi_models.embedders.abstract_model import AbstractModel
 import torch
 import numpy as np
 import os

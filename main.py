@@ -2,10 +2,11 @@ import pandas as pd
 from tqdm import tqdm
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
 from pbi_utils.logging import Logging, INFO, DEBUG
-from pbi_models.megaDNA import MegaDNA
+from pbi_models.embedders.megaDNA import MegaDNA
+from pbi_models.embedders.nucleotide_transformer_v2 import NT2
 from pbi_models.classifiers.base import BasicClassifier
-from pbi_models.abstract_model import AbstractModel
-from typing import Tuple, List
+from pbi_models.embedders.abstract_model import AbstractModel
+from typing import Tuple, List, get_args
 from sklearn.model_selection import train_test_split
 import torch
 import torch.nn as nn
@@ -20,13 +21,24 @@ logger = Logging(__name__)
 def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
     models = []
     for model_info in models_list:
+        # To add a new model, add the corresponding class & if statement. IMPORTANT: The `model_name` must match the class name (You can override the .name() method to change this).
         model_name = model_info[0]
+        # MegaDNA
         if model_name == "MegaDNA":
             if len(model_info) > 1:
                 weights_path = model_info[1]
             else:
                 raise ValueError(f"MegaDNA model for bacteria requires a weights path. Usage: `--bacteria-embedding-model MegaDNA path/to/weights.pt`")
             models.append(MegaDNA(weights_path=weights_path, device=device))
+        # NT-2
+        if model_name == "NT2":
+            if len(model_info) > 1:
+                hf_model_name = model_info[1]
+                if hf_model_name not in get_args(NT2.MODEL_NAMES):
+                    raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2.MODEL_NAMES)}")
+                models.append(NT2(device, model_name=hf_model_name))
+            else:
+                models.append(NT2(device))
         else:
             raise ValueError(f"Unknown bacteria embedding model: {model_name}")
     return models
@@ -73,6 +85,9 @@ def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phag
         phage_embeddings.append(output_manager.load_embedding_batch(result["phage_id"].tolist(), model_name=phage_model, device=device))
     result["phage_embedding"] = pd.Series([torch.cat(embeds) for embeds in zip(*phage_embeddings)])
 
+    logger.debug(f"Final embedding size (bacteria): {len(result['bacterium_embedding'].iloc[0])}")
+    logger.debug(f"Final embedding size (phages): {len(result['phage_embedding'].iloc[0])}")
+
     return result
 
 def dataframe_to_tf_dataloader(df: pd.DataFrame, batch_size: int, device: str):
@@ -92,9 +107,9 @@ def train_model(train_df: pd.DataFrame, model: nn.Module, batch_size: int, epoch
     criterion = nn.CrossEntropyLoss()
 
     # metrics
-    accuracy = tm.Accuracy(task="binary")
-    recall = tm.Recall(task="binary")
-    f1 = tm.F1Score(task="binary")
+    accuracy = tm.Accuracy(task="binary").to(device)
+    recall = tm.Recall(task="binary").to(device)
+    f1 = tm.F1Score(task="binary").to(device)
 
     if use_multiple_gpu:
         model = nn.DataParallel(model)
@@ -138,9 +153,9 @@ def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device:
     criterion = nn.CrossEntropyLoss()
 
     # metrics
-    accuracy = tm.Accuracy(task="binary")
-    recall = tm.Recall(task="binary")
-    f1 = tm.F1Score(task="binary")
+    accuracy = tm.Accuracy(task="binary").to(device)
+    recall = tm.Recall(task="binary").to(device)
+    f1 = tm.F1Score(task="binary").to(device)
 
     for bact_emb, phg_emb, labels in dataloader:
         logits = model(bact_emb, phg_emb)
@@ -168,7 +183,8 @@ if __name__ == "__main__":
     input_group.add_argument("-i", "--input-perphect", type=str, metavar="INPUT_DIR", help="The path of the folder containing the input data in the Perphect format. The folder must contain the following files: `bacteria_df.csv` (with the columns: `bacterium_id,bacterium_sequence,sequence_length`), `phages_df.csv` (with the columns: `phage_id,phage_sequence,sequence_length`) and `couples_df.csv` (with the columns: `id,bacterium_id,phage_id,interaction_type`, where `interaction_type` is either 1 or 0)")
 
     # Output
-    parser.add_argument("-e", "--embeddings-dir", type=str, default="/data/embeddings/<model>.h5", help="The path of the file where the embeddings are stored and read from (default = data/embeddings/<model>.h5)")
+    parser.add_argument("-e", "--embeddings-dir", type=str, default="/data/embeddings", help="The path where the embeddings will be stored and read from (default = data/embeddings)")
+    parser.add_argument("--use-cached-embeddings", action="store_true", help="Do not calculate embeddings, use cached ones. If set, `embeddings-dir` must point to a correct dir with the existing embeddings")
 
     parser.add_argument("--num-gpu", default=0, type=int, help="Number of GPUs available in the system. If 0, the model is run on the CPU (default = 0)")
     parser.add_argument("--gpu-id", default=0, type=int, help="Index of GPU to be employed (if 'num-gpu' == 1) (default = 0)")
@@ -185,24 +201,27 @@ if __name__ == "__main__":
         bacteria_df, phages_df, couples_df = PerphectDataInput(base_path=args.input_perphect).load()
 
     device = "cpu" if args.num_gpu == 0 else f"cuda:{args.gpu_id}"
+    logger.debug(f"Running on device: {device}")
 
     output_manager = H5pyEmbeddingsManager(args.embeddings_dir)
 
+    
+    # Create embeddings (if not cached)
+    if not args.use_cached_embeddings:
+        # Load embedding models
+        bacteria_models = load_embedding_models(args.bacteria_embedding_model, device=device)
+        phages_models = load_embedding_models(args.phages_embedding_model, device=device)
+        create_embeddings(bacteria_models, phages_models, bacteria_df, phages_df, output_manager, overwrite=True)
+
+    # Create train and test datasets
     bacteria_model_names = [x[0] for x in args.bacteria_embedding_model]
     phages_model_names = [x[0] for x in args.phages_embedding_model]
-    
-    # Load embedding models
-    bacteria_models = load_embedding_models(args.bacteria_embedding_model, device=device)
-    phages_models = load_embedding_models(args.phages_embedding_model, device=device)
-    create_embeddings(bacteria_models, phages_models, bacteria_df, phages_df, output_manager, overwrite=True)
-
     dataset = make_dataset(couples_df, bacteria_model_names, phages_model_names , output_manager, device)
-
     train, test = train_test_split(dataset, test_size=0.2, random_state=42, shuffle=True)
 
+    # Instantiate classifier
     bacterium_embed_size = len(train["bacterium_embedding"].iloc[0])
     phage_embed_size = len(train["phage_embedding"].iloc[0])
-
     model = BasicClassifier(bacterium_embed_size, phage_embed_size, hidden_dim=256) # type: ignore
 
     train_model(train, model, batch_size=128, epochs=5, device=device, use_multiple_gpu=False)

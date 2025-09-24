@@ -4,3 +4,4 @@ ipykernel
 pandas
 transformers==4.42.3
 torch==2.1.2
+ipywidgets
