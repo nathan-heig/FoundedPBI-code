@@ -4,3 +4,4 @@ torch==2.1.2
 einops
 pandas
 ipykernel
+ipywidgets
