@@ -18,113 +18,62 @@ micromamba activate -n pbi
 #     --bacteria-embedding-model MegaDNA data/weights/megaDNA_phage_145M.pt \
 
 echo "==============================================================================================================="
-echo "=========================================NT 100 Public dataset================================================="
+echo "=========================================DNABERT Public dataset================================================"
 echo "==============================================================================================================="
 
 python main.py \
     --input-perphect data/perphect-data/public_data_set \
-    --embeddings-dir data/embeddings-NT100 \
-    --phages-embedding-model NT2 nucleotide-transformer-v2-100m-multi-species \
-    --bacteria-embedding-model NT2 nucleotide-transformer-v2-100m-multi-species \
+    --embeddings-dir data/embeddings \
+    --phages-embedding-model DNABERT2 foundation-models-test/DNABERT-2/DNABERT-2-117M/ \
+    --bacteria-embedding-model DNABERT2 foundation-models-test/DNABERT-2/DNABERT-2-117M/ \
     --num-gpu 1 \
-    --gpu-id 0
+    --gpu-id 3
 
 echo "==============================================================================================================="
-echo "============================================NT 100 Private dataset============================================="
+echo "===========================================DNABERT Private dataset============================================="
 echo "==============================================================================================================="
 
 python main.py \
     --input-perphect data/perphect-data/private_data_set \
-    --embeddings-dir data/embeddings-NT100 \
-    --phages-embedding-model NT2 nucleotide-transformer-v2-100m-multi-species \
-    --bacteria-embedding-model NT2 nucleotide-transformer-v2-100m-multi-species \
+    --embeddings-dir data/embeddings \
+    --phages-embedding-model DNABERT2 foundation-models-test/DNABERT-2/DNABERT-2-117M/ \
+    --bacteria-embedding-model DNABERT2 foundation-models-test/DNABERT-2/DNABERT-2-117M/ \
     --num-gpu 1 \
-    --gpu-id 0
+    --gpu-id 3
 
 echo "==============================================================================================================="
-echo "======================================NT 100 all==============================================================="
-echo "==============================================================================================================="
-
-python main.py \
-    --input-perphect data/perphect-data/all \
-    --embeddings-dir data/embeddings-NT100 \
-    --use-cached-embeddings \
-    --phages-embedding-model NT2 nucleotide-transformer-v2-100m-multi-species \
-    --bacteria-embedding-model NT2 nucleotide-transformer-v2-100m-multi-species \
-    --num-gpu 1 \
-    --gpu-id 0
-
-echo "==============================================================================================================="
-echo "=========================================NT 50 Public dataset================================================="
+echo "=========================================EVO Public dataset================================================"
 echo "==============================================================================================================="
 
 python main.py \
     --input-perphect data/perphect-data/public_data_set \
-    --embeddings-dir data/embeddings-NT50 \
-    --phages-embedding-model NT2 nucleotide-transformer-v2-50m-multi-species \
-    --bacteria-embedding-model NT2 nucleotide-transformer-v2-50m-multi-species \
+    --embeddings-dir data/embeddings \
+    --phages-embedding-model EVO evo-1-131k-base \
+    --bacteria-embedding-model EVO evo-1-131k-base \
     --num-gpu 1 \
-    --gpu-id 0
+    --gpu-id 3
 
 echo "==============================================================================================================="
-echo "============================================NT 50 Private dataset============================================="
+echo "===========================================EVO Private dataset============================================="
 echo "==============================================================================================================="
 
 python main.py \
     --input-perphect data/perphect-data/private_data_set \
-    --embeddings-dir data/embeddings-NT50 \
-    --phages-embedding-model NT2 nucleotide-transformer-v2-50m-multi-species \
-    --bacteria-embedding-model NT2 nucleotide-transformer-v2-50m-multi-species \
+    --embeddings-dir data/embeddings \
+    --phages-embedding-model EVO evo-1-131k-base \
+    --bacteria-embedding-model EVO evo-1-131k-base \
     --num-gpu 1 \
-    --gpu-id 0
+    --gpu-id 3
 
-echo "==============================================================================================================="
-echo "======================================NT 50 all==============================================================="
-echo "==============================================================================================================="
+# echo "==============================================================================================================="
+# echo "=====================================DNABERT all==============================================================="
+# echo "==============================================================================================================="
 
-python main.py \
-    --input-perphect data/perphect-data/all \
-    --embeddings-dir data/embeddings-NT50 \
-    --use-cached-embeddings \
-    --phages-embedding-model NT2 nucleotide-transformer-v2-50m-multi-species \
-    --bacteria-embedding-model NT2 nucleotide-transformer-v2-50m-multi-species \
-    --num-gpu 1 \
-    --gpu-id 0
-
-echo "==============================================================================================================="
-echo "=========================================NT 250 Public dataset================================================="
-echo "==============================================================================================================="
-
-python main.py \
-    --input-perphect data/perphect-data/public_data_set \
-    --embeddings-dir data/embeddings-NT250 \
-    --phages-embedding-model NT2 nucleotide-transformer-v2-250m-multi-species \
-    --bacteria-embedding-model NT2 nucleotide-transformer-v2-250m-multi-species \
-    --num-gpu 1 \
-    --gpu-id 0
-
-echo "==============================================================================================================="
-echo "============================================NT 250 Private dataset============================================="
-echo "==============================================================================================================="
-
-python main.py \
-    --input-perphect data/perphect-data/private_data_set \
-    --embeddings-dir data/embeddings-NT250 \
-    --phages-embedding-model NT2 nucleotide-transformer-v2-250m-multi-species \
-    --bacteria-embedding-model NT2 nucleotide-transformer-v2-250m-multi-species \
-    --num-gpu 1 \
-    --gpu-id 0
-
-echo "==============================================================================================================="
-echo "======================================NT 250 all==============================================================="
-echo "==============================================================================================================="
-
-python main.py \
-    --input-perphect data/perphect-data/all \
-    --embeddings-dir data/embeddings-NT250 \
-    --use-cached-embeddings \
-    --phages-embedding-model NT2 nucleotide-transformer-v2-250m-multi-species \
-    --bacteria-embedding-model NT2 nucleotide-transformer-v2-250m-multi-species \
-    --num-gpu 1 \
-    --gpu-id 0
-
+# python main.py \
+#     --input-perphect data/perphect-data/all \
+#     --embeddings-dir data/embeddings \
+#     --use-cached-embeddings \
+#     --phages-embedding-model DNABERT2 foundation-models-test/DNABERT-2/DNABERT-2-117M/ \
+#     --bacteria-embedding-model DNABERT2 foundation-models-test/DNABERT-2/DNABERT-2-117M/ \
+#     --num-gpu 1 \
+#     --gpu-id 3

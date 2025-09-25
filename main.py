@@ -4,6 +4,8 @@ from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, Emb
 from pbi_utils.logging import Logging, INFO, DEBUG
 from pbi_models.embedders.megaDNA import MegaDNA
 from pbi_models.embedders.nucleotide_transformer_v2 import NT2
+from pbi_models.embedders.dnabert2 import DNABERT2
+from pbi_models.embedders.evo import EVO
 from pbi_models.classifiers.base import BasicClassifier
 from pbi_models.embedders.abstract_model import AbstractModel
 from typing import Tuple, List, get_args
@@ -19,28 +21,56 @@ Logging.set_logging_level(DEBUG)
 logger = Logging(__name__)
 
 def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
+    # TODO: Refactor this so it is easier to use and understand. Maybe give a way to define the number of arguments and get them automatically, etc
     models = []
     for model_info in models_list:
-        # To add a new model, add the corresponding class & if statement. IMPORTANT: The `model_name` must match the class name (You can override the .name() method to change this).
+        # To add a new model, add the corresponding class & switch case. IMPORTANT: The `model_name` must match the class name (You can override the .name() method to change this).
         model_name = model_info[0]
-        # MegaDNA
-        if model_name == "MegaDNA":
-            if len(model_info) > 1:
-                weights_path = model_info[1]
-            else:
-                raise ValueError(f"MegaDNA model for bacteria requires a weights path. Usage: `--bacteria-embedding-model MegaDNA path/to/weights.pt`")
-            models.append(MegaDNA(weights_path=weights_path, device=device))
-        # NT-2
-        if model_name == "NT2":
-            if len(model_info) > 1:
-                hf_model_name = model_info[1]
-                if hf_model_name not in get_args(NT2.MODEL_NAMES):
-                    raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2.MODEL_NAMES)}")
-                models.append(NT2(device, model_name=hf_model_name))
-            else:
-                models.append(NT2(device))
-        else:
-            raise ValueError(f"Unknown bacteria embedding model: {model_name}")
+        match model_name:
+            case "MegaDNA":
+                if len(model_info) > 1:
+                    weights_path = model_info[1]
+                else:
+                    raise ValueError(f"MegaDNA model for bacteria requires a weights path. Usage: `--bacteria-embedding-model MegaDNA path/to/weights.pt`")
+                models.append(MegaDNA(weights_path=weights_path, device=device))
+
+            case "NT2":
+                if len(model_info) > 1:
+                    hf_model_name = model_info[1]
+                    if hf_model_name not in get_args(NT2.MODEL_NAMES):
+                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2.MODEL_NAMES)}")
+                    models.append(NT2(device, model_name=hf_model_name))
+                else:
+                    models.append(NT2(device))
+            
+            case "DNABERT2":
+                if len(model_info) > 1:
+                    source_code_path = model_info[1]
+                else:
+                    raise ValueError(f"DNABERT2 model requires a path to the downloaded source code. You can download it from `https://huggingface.co/zhihan1996/DNABERT-2-117M?clone=true`, and fix the triton errors (change all `tl.dot(q, k, trans_b=True)` with `tl.dot(q, tl.trans(k))`)")
+                if len(model_info) > 2:
+                    max_seq_len = model_info[2]
+                else:
+                    max_seq_len = 2**15
+                models.append(DNABERT2(source_code_path, device, max_seq_len))
+
+            case "EVO":
+                if len(model_info) > 1:
+                    hf_model_name = model_info[1]
+                    if hf_model_name not in get_args(EVO.MODEL_NAMES):
+                        raise ValueError(f"Model name <{hf_model_name}> for EVO is not recognized. The following names are supported: {get_args(EVO.MODEL_NAMES)}")
+                else:
+                    raise ValueError(f"EVO model requires a model name. The following names are supported: {get_args(EVO.MODEL_NAMES)}")
+                if len(model_info) > 2:
+                    max_seq_len = model_info[2]
+                else:
+                    max_seq_len = 2**10
+    
+                models.append(EVO(hf_model_name, device, max_seq_len))
+
+            case _:
+                raise ValueError(f"Unknown embedding model: {model_name}")
+
     return models
 
 def create_embeddings(bacteria_models: List[AbstractModel], phages_models: List[AbstractModel], bacteria_df: pd.DataFrame, phages_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -176,6 +206,7 @@ def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device:
     logger.info(f'Loss (test): {test_loss/len(dataloader.dataset)}') # type: ignore
 
 if __name__ == "__main__":
+    # TODO: Move argument parsing to a function
     parser = argparse.ArgumentParser()
 
     # Input data. Only allow 1 type of data input
@@ -185,6 +216,8 @@ if __name__ == "__main__":
     # Output
     parser.add_argument("-e", "--embeddings-dir", type=str, default="/data/embeddings", help="The path where the embeddings will be stored and read from (default = data/embeddings)")
     parser.add_argument("--use-cached-embeddings", action="store_true", help="Do not calculate embeddings, use cached ones. If set, `embeddings-dir` must point to a correct dir with the existing embeddings")
+    # Train&Test
+    parser.add_argument("--no-train", action="store_true", help="Do not train or test the model, just compute the embeddings")
 
     parser.add_argument("--num-gpu", default=0, type=int, help="Number of GPUs available in the system. If 0, the model is run on the CPU (default = 0)")
     parser.add_argument("--gpu-id", default=0, type=int, help="Index of GPU to be employed (if 'num-gpu' == 1) (default = 0)")
@@ -213,19 +246,21 @@ if __name__ == "__main__":
         phages_models = load_embedding_models(args.phages_embedding_model, device=device)
         create_embeddings(bacteria_models, phages_models, bacteria_df, phages_df, output_manager, overwrite=True)
 
-    # Create train and test datasets
-    bacteria_model_names = [x[0] for x in args.bacteria_embedding_model]
-    phages_model_names = [x[0] for x in args.phages_embedding_model]
-    dataset = make_dataset(couples_df, bacteria_model_names, phages_model_names , output_manager, device)
-    train, test = train_test_split(dataset, test_size=0.2, random_state=42, shuffle=True)
+    # Create datasets, train and test classifier
+    if not args.no_train:
+        # Create train and test datasets
+        bacteria_model_names = [x[0] for x in args.bacteria_embedding_model]
+        phages_model_names = [x[0] for x in args.phages_embedding_model]
+        dataset = make_dataset(couples_df, bacteria_model_names, phages_model_names , output_manager, device)
+        train, test = train_test_split(dataset, test_size=0.2, random_state=42, shuffle=True)
 
-    # Instantiate classifier
-    bacterium_embed_size = len(train["bacterium_embedding"].iloc[0])
-    phage_embed_size = len(train["phage_embedding"].iloc[0])
-    model = BasicClassifier(bacterium_embed_size, phage_embed_size, hidden_dim=256) # type: ignore
+        # Instantiate classifier
+        bacterium_embed_size = len(train["bacterium_embedding"].iloc[0])
+        phage_embed_size = len(train["phage_embedding"].iloc[0])
+        model = BasicClassifier(bacterium_embed_size, phage_embed_size, hidden_dim=256)
 
-    train_model(train, model, batch_size=128, epochs=5, device=device, use_multiple_gpu=False)
-    test_model(test, model, batch_size=128, device=device)
+        train_model(train, model, batch_size=128, epochs=5, device=device, use_multiple_gpu=False)
+        test_model(test, model, batch_size=128, device=device)
 
 
 
