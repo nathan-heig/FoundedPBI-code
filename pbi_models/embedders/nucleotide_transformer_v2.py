@@ -9,7 +9,7 @@ Logging.set_logging_level()
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 Logging.set_logging_level(current_log_level)
 
-logger = Logging(__name__)
+logger = Logging()
 
 class NT2(AbstractModel):
     MODEL_NAMES = Literal["nucleotide-transformer-2.5b-multi-species", "nucleotide-transformer-2.5b-1000g", "nucleotide-transformer-500m-human-ref", "nucleotide-transformer-500m-1000g", "nucleotide-transformer-v2-50m-multi-species", "nucleotide-transformer-v2-50m-3mer-multi-species", "nucleotide-transformer-v2-100m-multi-species", "nucleotide-transformer-v2-500m-multi-species", "nucleotide-transformer-v2-250m-multi-species"]

@@ -5,7 +5,7 @@ import os
 import urllib.request
 from pbi_utils.logging import Logging
 from functools import reduce
-logger = Logging(__name__)
+logger = Logging()
 
 class MegaDNA(AbstractModel):
     def __init__(self, weights_path: str, device: str = "cpu") -> None:

@@ -3,7 +3,7 @@ from torch import nn
 import torch.nn.functional as F
 from pbi_utils.logging import Logging
 
-logger = Logging(__name__)
+logger = Logging()
 
 class BasicClassifier(nn.Module):
     def __init__(self, bacterium_embed_dim: int, phage_embed_dim: int, hidden_dim: int = 256):

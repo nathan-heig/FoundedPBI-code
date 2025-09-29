@@ -10,7 +10,7 @@ from transformers import AutoTokenizer, AutoModel
 from transformers.models.bert.configuration_bert import BertConfig
 Logging.set_logging_level(current_log_level)
 
-logger = Logging(__name__)
+logger = Logging()
 
 class DNABERT2(AbstractModel):
     def __init__(self, source_code_path: str, device: str = "cpu", max_seq_len: int = 2**15) -> None:

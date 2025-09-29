@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 from tqdm import tqdm
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
@@ -18,7 +19,7 @@ import argparse
 
 tqdm.pandas() # Initialize tqdm with pandas
 Logging.set_logging_level(DEBUG)
-logger = Logging(__name__)
+logger = Logging()
 
 def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
     # TODO: Refactor this so it is easier to use and understand. Maybe give a way to define the number of arguments and get them automatically, etc
@@ -186,6 +187,7 @@ def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device:
     accuracy = tm.Accuracy(task="binary").to(device)
     recall = tm.Recall(task="binary").to(device)
     f1 = tm.F1Score(task="binary").to(device)
+    cm = tm.ConfusionMatrix(task="binary").to(device)
 
     for bact_emb, phg_emb, labels in dataloader:
         logits = model(bact_emb, phg_emb)
@@ -199,14 +201,15 @@ def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device:
         accuracy(predictions, labels)
         f1(predictions, labels)
         recall(predictions, labels)
+        cm(predictions, labels)
 
     logger.info(f'Accuracy (test): {accuracy.compute()}')
     logger.info(f'Recall (test): {recall.compute()}')
     logger.info(f'F1 score (test): {f1.compute()}')
     logger.info(f'Loss (test): {test_loss/len(dataloader.dataset)}') # type: ignore
+    logger.info(f"Confusion Matrix (test): {cm.compute().cpu().numpy()}")
 
-if __name__ == "__main__":
-    # TODO: Move argument parsing to a function
+def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     # Input data. Only allow 1 type of data input
@@ -226,9 +229,13 @@ if __name__ == "__main__":
     parser.add_argument("-pem", "--phages-embedding-model", type=str, nargs="+", required=True, action="append", help="Name and parameters of the embedding model to use for the phages sequences. Use this flag multiple times to use multiple models. To be usede like: `--phages-embedding-model MegaDNA path/to/weights.pt`")
     parser.add_argument("-bem", "--bacteria-embedding-model", type=str, nargs="+", required=True, action="append", help="Name and parameters of the embedding model to use for the bacteria sequences. Use this flag multiple times to use multiple models. To be usede like: `--phages-embedding-model MegaDNA path/to/weights.pt`")
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    logger.debug(f"Arguments: {args}")
+if __name__ == "__main__":
+    
+    logger.info(f"Running: {' '.join(sys.argv)}")
+
+    args = parse_arguments()
 
     if args.input_perphect is not None:
         bacteria_df, phages_df, couples_df = PerphectDataInput(base_path=args.input_perphect).load()

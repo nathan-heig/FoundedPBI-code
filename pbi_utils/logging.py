@@ -7,7 +7,7 @@ INFO = logging.INFO
 WARNING = logging.WARNING
 ERROR = logging.ERROR
 
-class Logging():
+class Logging(object):
     """
     To log a message, at the start of your main program, add the following lines to configure the level of logging that will be displayed:
     ```
@@ -17,15 +17,20 @@ class Logging():
 
     and then, wherever you want to log, simply do:
     ```
-    logger = Logging(__name__)
+    logger = Logging()
 
     logger.debug("This is a debug message")
     logger.info("This is a info message")
     logger.warning("This is a warning")
     logger.error("This is an error")
     """
-    def __init__(self, name: str) -> None:
-        self.name = name
+
+    def __new__(cls):
+        if not hasattr(cls, 'instance'):
+            cls.instance = super(Logging, cls).__new__(cls)
+        return cls.instance
+
+    def __init__(self) -> None:
         self.debug_logger = None
         self.info_logger = None
         self.warning_logger = None
@@ -46,7 +51,7 @@ class Logging():
     
     def __create_new_logger(self, level: int, format: str):
         # Logger setup (https://middleware.io/blog/python-logging-format/)
-        logger = logging.getLogger(self.name + str(level))
+        logger = logging.getLogger(str(level))
         console_handler = logging.StreamHandler(stream=sys.stdout)
         formatter = logging.Formatter(fmt=format)
         logger.propagate = False  # To avoid repeated outputs
