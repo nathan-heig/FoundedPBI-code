@@ -2,13 +2,8 @@ from pbi_models.embedders.abstract_model import AbstractModel
 import torch
 from pbi_utils.logging import Logging, logging
 from pbi_utils.utils import clean_gpu
-
-# Not show internal transformers logging messages
-current_log_level = logging.root.level
-Logging.set_logging_level()
 from transformers import AutoTokenizer, AutoModel
 from transformers.models.bert.configuration_bert import BertConfig
-Logging.set_logging_level(current_log_level)
 
 logger = Logging()
 
@@ -16,11 +11,18 @@ class DNABERT2(AbstractModel):
     def __init__(self, source_code_path: str, device: str = "cpu", max_seq_len: int = 2**15) -> None:
 
         self.device = device
+        
+        # Not show internal transformers logging messages
+        current_log_level = logging.root.level
+        Logging.set_logging_level()
 
         self.tokenizer = AutoTokenizer.from_pretrained(source_code_path, trust_remote_code=True)
         config = BertConfig.from_pretrained(source_code_path)
         self.model = AutoModel.from_pretrained(source_code_path, trust_remote_code=True, config=config)
 
+        Logging.set_logging_level(current_log_level)
+
+        
         self.model.to(self.device)
         self.model.eval()
 

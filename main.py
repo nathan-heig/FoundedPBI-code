@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
@@ -16,6 +17,8 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, Dataset, DataLoader
 import torchmetrics as tm
 import argparse
+import time
+from pbi_utils.utils import Stats
 
 tqdm.pandas() # Initialize tqdm with pandas
 Logging.set_logging_level(DEBUG)
@@ -131,16 +134,17 @@ def dataframe_to_tf_dataloader(df: pd.DataFrame, batch_size: int, device: str):
 
     return dataloader
 
-def train_model(train_df: pd.DataFrame, model: nn.Module, batch_size: int, epochs: int, device: str, use_multiple_gpu: bool = True):
+def train_model(train_df: pd.DataFrame, model: nn.Module, batch_size: int, learning_rate: float, epochs: int, device: str, use_multiple_gpu: bool = True) -> np.ndarray:
     dataloader = dataframe_to_tf_dataloader(train_df, batch_size=batch_size, device=device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss()
 
     # metrics
     accuracy = tm.Accuracy(task="binary").to(device)
     recall = tm.Recall(task="binary").to(device)
     f1 = tm.F1Score(task="binary").to(device)
+    cm = tm.ConfusionMatrix(task="binary").to(device)
 
     if use_multiple_gpu:
         model = nn.DataParallel(model)
@@ -166,6 +170,7 @@ def train_model(train_df: pd.DataFrame, model: nn.Module, batch_size: int, epoch
                 acc = accuracy(predictions, labels)
                 f1(predictions, labels)
                 rec = recall(predictions, labels)
+                cm(predictions, labels)
 
                 tepoch.set_postfix(loss=loss.item(), accuracy=100. * acc.item(), recall=100. * rec.item())
     
@@ -174,8 +179,12 @@ def train_model(train_df: pd.DataFrame, model: nn.Module, batch_size: int, epoch
     logger.info(f'Recall (train): {recall.compute()}')
     logger.info(f'F1 score (train): {f1.compute()}')
     logger.info(f"Loss (train): {loss}")
+    cm_mat = cm.compute().cpu().numpy()[::-1, ::-1].T # Transpose anti diagonal (torchmetrics default: TN, FP, FN, TP)
+    logger.info(f"Confusion Matrix (train) (TP, FP, FN, TN): {cm_mat[0][0], cm_mat[0][1], cm_mat[1][0], cm_mat[1][1]}")
 
-def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device: str):
+    return cm_mat
+
+def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device: str) -> np.ndarray:
     logger.info(f"Starting testing...")
     dataloader = dataframe_to_tf_dataloader(test_df, batch_size, device)
 
@@ -207,7 +216,10 @@ def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device:
     logger.info(f'Recall (test): {recall.compute()}')
     logger.info(f'F1 score (test): {f1.compute()}')
     logger.info(f'Loss (test): {test_loss/len(dataloader.dataset)}') # type: ignore
-    logger.info(f"Confusion Matrix (test): {cm.compute().cpu().numpy()}")
+    cm_mat = cm.compute().cpu().numpy()[::-1, ::-1].T # Transpose anti diagonal (torchmetrics default: TN, FP, FN, TP)
+    logger.info(f"Confusion Matrix (test) (TP, FP, FN, TN): {cm_mat[0][0], cm_mat[0][1], cm_mat[1][0], cm_mat[1][1]}")
+
+    return cm_mat
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -221,6 +233,9 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--use-cached-embeddings", action="store_true", help="Do not calculate embeddings, use cached ones. If set, `embeddings-dir` must point to a correct dir with the existing embeddings")
     # Train&Test
     parser.add_argument("--no-train", action="store_true", help="Do not train or test the model, just compute the embeddings")
+    parser.add_argument("--epochs", type=int, default=10, help="Number of epochs to train the classifier model")
+    parser.add_argument("-bs", "--batch-size", type=int, default=128, help="Batch size to use for training and testing of the classifier")
+    parser.add_argument("-lr", "--learning-rate", type=float, default=1e-3, help="Learning rate to use for training with Adam optimizer")
 
     parser.add_argument("--num-gpu", default=0, type=int, help="Number of GPUs available in the system. If 0, the model is run on the CPU (default = 0)")
     parser.add_argument("--gpu-id", default=0, type=int, help="Index of GPU to be employed (if 'num-gpu' == 1) (default = 0)")
@@ -236,6 +251,8 @@ if __name__ == "__main__":
     logger.info(f"Running: {' '.join(sys.argv)}")
 
     args = parse_arguments()
+
+    stats = Stats(args)
 
     if args.input_perphect is not None:
         bacteria_df, phages_df, couples_df = PerphectDataInput(base_path=args.input_perphect).load()
@@ -266,8 +283,21 @@ if __name__ == "__main__":
         phage_embed_size = len(train["phage_embedding"].iloc[0])
         model = BasicClassifier(bacterium_embed_size, phage_embed_size, hidden_dim=256)
 
-        train_model(train, model, batch_size=128, epochs=5, device=device, use_multiple_gpu=False)
-        test_model(test, model, batch_size=128, device=device)
+        stats.update_classifier(model)
+
+        t = time.perf_counter()
+        cm = train_model(train, model, batch_size=args.batch_size, learning_rate=args.learning_rate, epochs=args.epochs, device=device, use_multiple_gpu=False)
+        train_time = time.perf_counter() - t
+
+        stats.update_train_results(cm, train_time)
+
+        t = time.perf_counter()
+        cm = test_model(test, model, batch_size=args.batch_size, device=device)
+        test_time = time.perf_counter() - t
+
+        stats.update_test_results(cm, test_time)
+
+        stats.log(logger.info)
 
 
 

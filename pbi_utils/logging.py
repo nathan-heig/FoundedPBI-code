@@ -47,7 +47,8 @@ class Logging(object):
         from utils.logging import Logging, INFO
         Logging.set_logging_level(INFO)
         """
-        logging.basicConfig(level=level, stream=sys.stdout)
+
+        logging.basicConfig(level=level, stream=sys.stdout, force=True)
     
     def __create_new_logger(self, level: int, format: str):
         # Logger setup (https://middleware.io/blog/python-logging-format/)
