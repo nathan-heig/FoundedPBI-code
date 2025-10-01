@@ -49,7 +49,7 @@ def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
                 else:
                     raise ValueError(f"DNABERT2 model requires a path to the downloaded source code. You can download it from `https://huggingface.co/zhihan1996/DNABERT-2-117M?clone=true`, and fix the triton errors (change all `tl.dot(q, k, trans_b=True)` with `tl.dot(q, tl.trans(k))`)")
                 if len(model_info) > 2:
-                    max_seq_len = model_info[2]
+                    max_seq_len = int(model_info[2])
                 else:
                     max_seq_len = 2**15
                 models.append(DNABERT2(source_code_path, device, max_seq_len))
@@ -62,7 +62,7 @@ def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
                 else:
                     raise ValueError(f"EVO model requires a model name. The following names are supported: {get_args(EVO.MODEL_NAMES)}")
                 if len(model_info) > 2:
-                    max_seq_len = model_info[2]
+                    max_seq_len = int(model_info[2])
                 else:
                     max_seq_len = 2**10
     

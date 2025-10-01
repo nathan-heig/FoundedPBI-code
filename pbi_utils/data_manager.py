@@ -43,7 +43,7 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
         id = str(id) # type: ignore
 
         # ensure CPU + numpy
-        data = embedding.detach().cpu().numpy()
+        data = embedding.detach().cpu().float().numpy()
 
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "a") as f:
             if not overwrite and id in f:
@@ -58,7 +58,7 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
             for id, embedding in tqdm(zip(ids, embeddings), total=len(ids), desc="Saving embeddings"):
                 id = str(id) # type: ignore
                 # ensure CPU + numpy
-                data = embedding.detach().cpu().numpy()
+                data = embedding.detach().cpu().float().numpy()
                 if not overwrite and id in f:
                     print(f"{id} already exists, skipping it. To overwrite the value, use overwrite=True")
                 else:
