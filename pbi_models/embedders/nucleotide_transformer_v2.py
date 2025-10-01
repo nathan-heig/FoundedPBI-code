@@ -3,13 +3,9 @@ import torch
 from pbi_utils.logging import Logging, logging
 from typing import Literal
 
-# Not show internal transformers logging messages
-current_log_level = logging.root.level
-Logging.set_logging_level()
 from transformers import AutoTokenizer, AutoModelForMaskedLM
-Logging.set_logging_level(current_log_level)
 
-logger = Logging(__name__)
+logger = Logging()
 
 class NT2(AbstractModel):
     MODEL_NAMES = Literal["nucleotide-transformer-2.5b-multi-species", "nucleotide-transformer-2.5b-1000g", "nucleotide-transformer-500m-human-ref", "nucleotide-transformer-500m-1000g", "nucleotide-transformer-v2-50m-multi-species", "nucleotide-transformer-v2-50m-3mer-multi-species", "nucleotide-transformer-v2-100m-multi-species", "nucleotide-transformer-v2-500m-multi-species", "nucleotide-transformer-v2-250m-multi-species"]
@@ -17,14 +13,22 @@ class NT2(AbstractModel):
 
         self.device = device
 
+
+        # Not show internal transformers logging messages
+        current_log_level = logging.root.level
+        Logging.set_logging_level()
+        
         self.tokenizer = AutoTokenizer.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
         self.model = AutoModelForMaskedLM.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
+        
+        Logging.set_logging_level(current_log_level)
+
 
         self.model.to(self.device)
 
         self.max_seq_len = self.tokenizer.model_max_length
 
-        logger.debug(f"Max sequence length for megaDNA: {self.max_seq_len}")
+        logger.debug(f"Max sequence length for Nucleotide Transformer: {self.max_seq_len}")
 
     def embed(self, dna_sequence: str) -> torch.Tensor:
         tokens = self.__encode(dna_sequence)
@@ -45,7 +49,7 @@ class NT2(AbstractModel):
         attention_mask_unsq = torch.unsqueeze(attention_mask, dim=-1)
 
         # Compute mean embeddings per sequence
-        mean_embed = torch.sum(attention_mask_unsq*embeddings, axis=-2)/torch.sum(attention_mask_unsq, axis=1)
+        mean_embed = torch.sum(attention_mask_unsq*embeddings, axis=-2)/torch.sum(attention_mask_unsq, axis=1) # type: ignore
 
         return mean_embed
 

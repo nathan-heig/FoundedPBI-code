@@ -5,7 +5,9 @@ import os
 import urllib.request
 from pbi_utils.logging import Logging
 from functools import reduce
-logger = Logging(__name__)
+
+from pbi_utils.utils import clean_gpu
+logger = Logging()
 
 class MegaDNA(AbstractModel):
     def __init__(self, weights_path: str, device: str = "cpu") -> None:
@@ -16,17 +18,21 @@ class MegaDNA(AbstractModel):
 
         self.device = device
         self.model = torch.load(weights_path, map_location=torch.device(device))
+        self.model.eval()
 
         self.max_seq_len = reduce(lambda x, y: x*y, self.model.max_seq_len)-1
         logger.debug(f"Max sequence length for megaDNA: {self.max_seq_len}")
 
     def embed(self, dna_sequence: str) -> torch.Tensor:
-        input_seq = self.__encode(dna_sequence)
-        output = self.model(input_seq, return_value = 'embedding')
+        clean_gpu()
+        with torch.no_grad():
+            input_seq = self.__encode(dna_sequence)
+            output = self.model(input_seq, return_value = 'embedding')
 
         # In the paper, they concatenated all three embeddings, here I'm only returning the last one
         last_embed = output[-1]
-        mean_embed = last_embed.mean(dim=1).squeeze(0)
+        mean_embed = last_embed.mean(dim=(0,1))
+
         return mean_embed
 
     def __vocabulary(self, char: str) -> int:

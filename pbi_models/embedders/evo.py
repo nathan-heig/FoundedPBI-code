@@ -10,7 +10,7 @@ Logging.set_logging_level()
 from transformers import AutoModelForCausalLM, AutoTokenizer
 Logging.set_logging_level(current_log_level)
 
-logger = Logging(__name__)
+logger = Logging()
 
 class EVO(AbstractModel):
     MODEL_NAMES = Literal["evo-1.5-8k-base", "evo-1-8k-base", "evo-1-131k-base"]

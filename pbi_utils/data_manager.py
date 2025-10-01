@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Tuple, List
 from pbi_utils.logging import Logging
 
-logger = Logging(__name__)
+logger = Logging()
 
 class EmbeddingsManager(ABC):
     @abstractmethod
