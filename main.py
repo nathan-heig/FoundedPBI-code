@@ -5,7 +5,7 @@ from tqdm import tqdm
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
 from pbi_utils.logging import Logging, INFO, DEBUG
 from pbi_models.embedders.megaDNA import MegaDNA
-from pbi_models.embedders.nucleotide_transformer_v2 import NT2
+from pbi_models.embedders.nucleotide_transformer_v2 import NT2, NT2_sentence_avg
 from pbi_models.embedders.dnabert2 import DNABERT2
 from pbi_models.embedders.evo import EVO
 from pbi_models.classifiers.base import BasicClassifier
@@ -46,6 +46,16 @@ def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
                     models.append(NT2(device, model_name=hf_model_name))
                 else:
                     models.append(NT2(device))
+            
+            case "NT2_sentence_avg":
+                if len(model_info) > 1:
+                    hf_model_name = model_info[1]
+                    if hf_model_name not in get_args(NT2_sentence_avg.MODEL_NAMES):
+                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_avg.MODEL_NAMES)}")
+                    models.append(NT2_sentence_avg(device, model_name=hf_model_name))
+                else:
+                    models.append(NT2_sentence_avg(device))
+            
             
             case "DNABERT2":
                 if len(model_info) > 1:

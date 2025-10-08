@@ -1,4 +1,4 @@
-numpy==1.23.5
+numpy==1.26.4
 torch==2.1.2
 pandas
 h5py
@@ -6,6 +6,9 @@ tqdm
 colorama
 scikit-learn
 torchmetrics
+matplotlib
+seaborn
+imbalanced-learn
 
 git+https://github.com/lingxusb/megaDNA@main
 
