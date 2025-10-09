@@ -4,11 +4,19 @@ micromamba activate -n pbi
 
 python main.py \
     --input-perphect data/perphect-data/public_data_set \
-    --embeddings-dir data/embeddings \
+    --embeddings-dir data/embeddings-avg-NT50 \
     --phages-embedding-model NT2_sentence_avg nucleotide-transformer-v2-50m-multi-species \
     --bacteria-embedding-model NT2_sentence_avg nucleotide-transformer-v2-50m-multi-species \
     --num-gpu 1 \
-    --gpu-id 1 \
+    --gpu-id 1
+
+python main.py \
+    --input-perphect data/perphect-data/public_data_set \
+    --embeddings-dir data/embeddings-avg-NT100 \
+    --phages-embedding-model NT2_sentence_avg nucleotide-transformer-v2-100m-multi-species \
+    --bacteria-embedding-model NT2_sentence_avg nucleotide-transformer-v2-100m-multi-species \
+    --num-gpu 1 \
+    --gpu-id 1
 
 # python main.py \
 #     --input-perphect data/perphect-data/all-private-oversampled \

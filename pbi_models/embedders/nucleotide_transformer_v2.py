@@ -73,17 +73,18 @@ class NT2_sentence_avg(NT2):
 
         # Batch size is not useful, as it takes almost the same time as doing it one by one and it uses much more memory
 
-        if tokens.shape[0] > 10:
+        if tokens.shape[0] > 50:
             tokens = tqdm(tokens, desc="Embedding chunks")
 
         for sentence in tokens:
             embeddings = super()._embed_from_tokens(sentence.unsqueeze(0))
             embeddings_list.append(embeddings)
 
-        embeddings = torch.cat(embeddings_list, dim=0)
+        embeddings = torch.stack(embeddings_list, dim=0)
         
         # Average the embeddings of the tokens in the sequence
-        mean_embed = torch.mean(embeddings, dim=1)
+        mean_embed = torch.mean(embeddings, dim=0)
+
         return mean_embed
 
     def __encode(self, dna_sequence: str) -> torch.Tensor:
