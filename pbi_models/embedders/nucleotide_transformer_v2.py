@@ -195,8 +195,6 @@ class NT2_sentence_TKPERT(NT2_sentence_avg):
         tokens = self._encode(dna_sequence)
 
         embeddings = self._compute_batch_embeddings(tokens).squeeze(1)
-
-        print(f"Embeddings shape: {embeddings.shape}")
         
         embed = self.tk_pert_embedding(embeddings)
         
