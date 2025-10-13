@@ -26,7 +26,7 @@ class MegaDNA(AbstractModel):
     def embed(self, dna_sequence: str) -> torch.Tensor:
         clean_gpu()
         with torch.no_grad():
-            input_seq = self.__encode(dna_sequence)
+            input_seq = self._encode(dna_sequence)
             output = self.model(input_seq, return_value = 'embedding')
 
         # In the paper, they concatenated all three embeddings, here I'm only returning the last one
@@ -45,7 +45,7 @@ class MegaDNA(AbstractModel):
             case "#": return 5
             case _: return 0
 
-    def __encode(self, dna_sequence: str) -> torch.Tensor:
+    def _encode(self, dna_sequence: str) -> torch.Tensor:
         if len(dna_sequence) > self.max_seq_len:
             logger.debug(f"Found DNA sequence longer than max length ({len(dna_sequence)} vs {self.max_seq_len}), trimming it")
             dna_sequence = dna_sequence[:self.max_seq_len]

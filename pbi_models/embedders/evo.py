@@ -31,7 +31,7 @@ class EVO(AbstractModel):
     def embed(self, dna_sequence: str) -> torch.Tensor:
         clean_gpu()
         with torch.no_grad():
-            tokens = self.__encode(dna_sequence)
+            tokens = self._encode(dna_sequence)
             # Compute the embeddings
             output = self.model(tokens)[0] # [1, sequence_length, 768]
 
@@ -42,7 +42,7 @@ class EVO(AbstractModel):
 
         return mean_embed
 
-    def __encode(self, dna_sequence: str) -> torch.Tensor:
+    def _encode(self, dna_sequence: str) -> torch.Tensor:
         if len(dna_sequence) > self.max_seq_len:
             logger.debug(f"Found DNA sequence longer than max length ({len(dna_sequence)} vs {self.max_seq_len}), truncating it")
             dna_sequence = dna_sequence[:self.max_seq_len]

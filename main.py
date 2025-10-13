@@ -5,7 +5,7 @@ from tqdm import tqdm
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
 from pbi_utils.logging import Logging, INFO, DEBUG
 from pbi_models.embedders.megaDNA import MegaDNA
-from pbi_models.embedders.nucleotide_transformer_v2 import NT2, NT2_sentence_avg
+from pbi_models.embedders.nucleotide_transformer_v2 import NT2, NT2_sentence_avg, NT2_sentence_max, NT2_sentence_tfidf, NT2_sentence_TKPERT
 from pbi_models.embedders.dnabert2 import DNABERT2
 from pbi_models.embedders.evo import EVO
 from pbi_models.classifiers.base import BasicClassifier
@@ -55,6 +55,47 @@ def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
                     models.append(NT2_sentence_avg(device, model_name=hf_model_name))
                 else:
                     models.append(NT2_sentence_avg(device))
+            
+            case "NT2_sentence_max":
+                if len(model_info) > 1:
+                    hf_model_name = model_info[1]
+                    if hf_model_name not in get_args(NT2_sentence_max.MODEL_NAMES):
+                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_max.MODEL_NAMES)}")
+                    models.append(NT2_sentence_max(device, model_name=hf_model_name))
+                else:
+                    models.append(NT2_sentence_max(device))
+            
+            case "NT2_sentence_tfidf":
+                if len(model_info) > 1:
+                    hf_model_name = model_info[1]
+                    if hf_model_name not in get_args(NT2_sentence_tfidf.MODEL_NAMES):
+                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_tfidf.MODEL_NAMES)}")
+                    models.append(NT2_sentence_tfidf(device, model_name=hf_model_name))
+                else:
+                    models.append(NT2_sentence_tfidf(device))
+            
+            case "NT2_sentence_TKPERT":
+                if len(model_info) > 1:
+                    hf_model_name = model_info[1]
+                    if hf_model_name not in get_args(NT2_sentence_TKPERT.MODEL_NAMES):
+                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_TKPERT.MODEL_NAMES)}")
+                    if len(model_info) > 2:
+                        J = int(model_info[2])
+                    else:
+                        J = 16
+                    if len(model_info) > 3:
+                        gamma = float(model_info[3])
+                    else:
+                        gamma = 20
+                    if len(model_info) > 4:
+                        merging_strategy = model_info[4]
+                        if merging_strategy not in ["avg", "concat"]:
+                            raise ValueError(f"merging_strategy <{merging_strategy}> for NT2_sentence_TKPERT is not recognized. Supported values are: ['avg', 'concat']")
+                    else:
+                        merging_strategy = "concat"
+                    models.append(NT2_sentence_TKPERT(device, model_name=hf_model_name, J=J, gamma=gamma))
+                else:
+                    models.append(NT2_sentence_TKPERT(device))
             
             
             case "DNABERT2":
