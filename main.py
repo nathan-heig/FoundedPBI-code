@@ -5,7 +5,7 @@ from tqdm import tqdm
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
 from pbi_utils.logging import Logging, INFO, DEBUG
 from pbi_models.embedders.megaDNA import MegaDNA
-from pbi_models.embedders.nucleotide_transformer_v2 import NT2, NT2_sentence_avg, NT2_sentence_max, NT2_sentence_tfidf, NT2_sentence_TKPERT
+from pbi_models.embedders.nucleotide_transformer_v2 import NT2, NT2_sentence_avg, NT2_sentence_max, NT2_sentence_tfidf, NT2_sentence_TKPERT, NT2_sentence_tf4idf
 from pbi_models.embedders.dnabert2 import DNABERT2
 from pbi_models.embedders.evo import EVO
 from pbi_models.classifiers.base import BasicClassifier
@@ -70,9 +70,34 @@ def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
                     hf_model_name = model_info[1]
                     if hf_model_name not in get_args(NT2_sentence_tfidf.MODEL_NAMES):
                         raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_tfidf.MODEL_NAMES)}")
-                    models.append(NT2_sentence_tfidf(device, model_name=hf_model_name))
+                    if len(model_info) > 2:
+                        k = int(model_info[2])
+                    else:
+                        k = 6
+                    if len(model_info) > 3:
+                        overlap = int(model_info[3])
+                    else:
+                        overlap = 0
+                    models.append(NT2_sentence_tfidf(device, model_name=hf_model_name, k=k, overlap=overlap))
                 else:
                     models.append(NT2_sentence_tfidf(device))
+
+            case "NT2_sentence_tf4idf":
+                if len(model_info) > 1:
+                    hf_model_name = model_info[1]
+                    if hf_model_name not in get_args(NT2_sentence_tf4idf.MODEL_NAMES):
+                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_tf4idf.MODEL_NAMES)}")
+                    if len(model_info) > 2:
+                        k = int(model_info[2])
+                    else:
+                        k = 6
+                    if len(model_info) > 3:
+                        overlap = int(model_info[3])
+                    else:
+                        overlap = 0
+                    models.append(NT2_sentence_tf4idf(device, model_name=hf_model_name, k=k, overlap=overlap))
+                else:
+                    models.append(NT2_sentence_tf4idf(device))
             
             case "NT2_sentence_TKPERT":
                 if len(model_info) > 1:

@@ -4,7 +4,7 @@ from pbi_models.embedders.abstract_model import AbstractModel
 import torch
 from pbi_utils.logging import Logging, logging
 from typing import Literal
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, TfidfTransformer
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from scipy.stats import beta
 
@@ -126,15 +126,22 @@ class NT2_sentence_max(NT2_sentence_avg):
 class NT2_sentence_tfidf(NT2_sentence_avg):
     """ Embeds a DNA sequence by splitting it into overlapping chunks of max_seq_len, embedding each chunk with NT2, and averaging the embeddings weighted by TF-IDF weights. """
 
+    def __init__(self, device: str = "cpu", model_name: NT2.MODEL_NAMES = "nucleotide-transformer-v2-50m-multi-species", k: int = 6, overlap: int = 0):
+        super().__init__(device, model_name)
+
+        self.k = k
+        self.overlap = overlap
+
     def embed(self, dna_sequence: str) -> torch.Tensor:
-        max_len = (self.max_seq_len - 1) * 6 # NT tokenizes the sequence as 6-mers, and max_seq_len is for the tokenized sequence. (-1 for the special tokens)
+        # Manually split the sequences
+        sequences = self._split_sequence(dna_sequence)
 
-        sequences, weights = self.get_subsequence_weights(dna_sequence, max_len, 6, 0)
+        # Get TF-IDF weights for each subsequence
+        weights = self._get_subsequence_weights(sequences)
 
+        # Get embeddings for each subsequence
         tokens = self._encode(sequences)
-
         embeddings = self._compute_batch_embeddings(tokens)
-
         embeddings = embeddings.squeeze(1)
 
         # Perform weighted average using tfidf weights
@@ -145,41 +152,77 @@ class NT2_sentence_tfidf(NT2_sentence_avg):
         
         return weighted_embed
 
-    def get_subsequence_weights(self, sequence: str, max_len: int, k: int = 6, overlap: int = 0) -> tuple[list[str], np.ndarray]:
+    # Divide sequence into overlapping subsequences
+    def _split_sequence(self, sequence: str) -> list[str]:
+        max_len = (self.max_seq_len - 1) * 6 # NT tokenizes the sequence as 6-mers, and max_seq_len is for the tokenized sequence. (-1 for the special tokens)
+        step = max_len - self.overlap
+        subsequences = [sequence[i:i+max_len] for i in range(0, len(sequence), step)]
+        return subsequences
+
+    # Convert subsequences into k-mer "documents" (Add space between k-mers) to use with TfidfVectorizer
+    def _get_kmers(self, seq: str) -> str:
+        return " ".join(seq[i:i+self.k] for i in range(len(seq) - self.k + 1))
+        
+    def _get_subsequence_weights(self, subsequences: list[str]) -> np.ndarray:
         """
-        Splits a DNA sequence into overlapping subsequences of up to max_len, computes TF-IDF weights based on k-mer representation, and returns (subsequences, weights).
         Co-authored by ChatGPT.
         """
-
-        # Divide sequence into overlapping subsequences
-        step = max_len - overlap
-        subsequences = [sequence[i:i+max_len] for i in range(0, len(sequence), step)]
-        
-        # Convert subsequences into k-mer "documents" (Add space between k-mers)
-        def kmers(seq: str) -> str:
-            return " ".join(seq[i:i+k] for i in range(len(seq) - k + 1))
-        
-        docs = [kmers(subseq) for subseq in subsequences]
+        docs = [self._get_kmers(subseq) for subseq in subsequences]
         
         # Compute TF-IDF matrix
         vectorizer = TfidfVectorizer(analyzer='word', token_pattern=r'[^ ]+')
         tfidf_matrix = vectorizer.fit_transform(docs)
         
-        # Compute weight per subsequence (mean TF-IDF)
+        # Compute weight per subsequence (mean TF-IDF). We could also use sum, max, etc.
         weights = np.asarray(tfidf_matrix.mean(axis=1)).flatten() # type: ignore
         
         # Normalize weights so they sum to 1
         if weights.sum() > 0:
             weights = weights / weights.sum()
         
-        return subsequences, weights
+        return weights
 
     def _encode(self, dna_sequence: list[str]) -> torch.Tensor:
         # Tokenize the entire sequence at once
         tokens_ids = self.tokenizer.batch_encode_plus(dna_sequence, return_tensors="pt", padding=True)["input_ids"].to(self.device)
         
         return tokens_ids
-    
+
+class NT2_sentence_tf4idf(NT2_sentence_tfidf):
+    """ Embeds a DNA sequence by splitting it into overlapping chunks of max_seq_len, embedding each chunk with NT2, and averaging the embeddings weighted by TF4-IDF weights. """
+      
+    def _get_subsequence_weights(self, subsequences: list[str]) -> np.ndarray:
+        """
+        Get TF4-IDF weights for each subsequence. Variant of TF-IDF described in https://arxiv.org/pdf/2304.14796, wich achieves better results in natural text.
+        """
+        docs = [self._get_kmers(subseq) for subseq in subsequences]
+
+        # Compute raw term frequencies using CountVectorizer
+        vectorizer = CountVectorizer(analyzer='word', token_pattern=r'[^ ]+')
+        term_counts = vectorizer.fit_transform(docs).toarray().astype(float)  # type: ignore # shape: (num_docs, num_terms)
+
+        # Apply TF4 formula
+        max_freq_per_doc = term_counts.max(axis=1, keepdims=True)
+        max_freq_per_doc[max_freq_per_doc == 0] = 1  # avoid div by zero
+        tf4 = 0.4 + 0.6 * (term_counts / max_freq_per_doc)
+
+        # Compute IDF
+        transformer = TfidfTransformer(norm=None, use_idf=True, smooth_idf=True, sublinear_tf=False)
+        transformer.fit(term_counts)
+        idf = transformer.idf_  # shape: (num_terms,)
+
+        # Combine TF4 and IDF
+        tfidf_tf4 = tf4 * idf  # (num_docs, num_terms)
+
+        # Aggregate to one weight per subsequence (mean TF4-IDF per doc). As before, we could also use sum, max, etc.
+        weights = tfidf_tf4.mean(axis=1)
+
+        # Normalize weights
+        weights = np.maximum(weights, 0) # avoid negative weights (which should never happen, but just in case)
+        weights = weights / weights.sum()
+
+        return weights
+
 class NT2_sentence_TKPERT(NT2_sentence_avg):
     """ Embeds a DNA sequence by splitting it into overlapping chunks of max_seq_len, embedding each chunk with NT2, and concatenating the embeddings weighted by TK-PERT weights. """
 
