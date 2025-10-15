@@ -7,12 +7,13 @@ import torchmetrics as tm
 import datetime
 import torch.nn as nn
 
+
 def clean_gpu():
     torch.cuda.empty_cache()
     gc.collect()
 
 class Stats:
-    def __init__(self, args: argparse.Namespace) -> None:
+    def __init__(self, args) -> None:
         self.args = args
         self.test_cm = None
         self.train_cm = None
@@ -32,8 +33,8 @@ class Stats:
     def log(self, logger):
         # Print all the stats in the format required by excel
 
-        bacteria_model_names = [x[0] for x in self.args.bacteria_embedding_model]
-        phages_model_names = [x[0] for x in self.args.phages_embedding_model]
+        bacteria_model_names = [str(x) for x in self.args.bacteria_embedding_models]
+        phages_model_names = [str(x) for x in self.args.phages_embedding_models]
 
         data = [
             datetime.datetime.now().strftime("%d/%m/%YT%H:%M:%S"),

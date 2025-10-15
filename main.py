@@ -2,156 +2,25 @@ import sys
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from pbi_utils.config_parser import parse_config
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
 from pbi_utils.logging import Logging, INFO, DEBUG
-from pbi_models.embedders.megaDNA import MegaDNA
-from pbi_models.embedders.nucleotide_transformer_v2 import NT2, NT2_sentence_avg, NT2_sentence_max, NT2_sentence_tfidf, NT2_sentence_TKPERT, NT2_sentence_tf4idf
-from pbi_models.embedders.dnabert2 import DNABERT2
-from pbi_models.embedders.evo import EVO
 from pbi_models.classifiers.base import BasicClassifier
 from pbi_models.embedders.abstract_model import AbstractModel
-from typing import Tuple, List, get_args
+from typing import Tuple, List
 from sklearn.model_selection import train_test_split
 import torch
 import torch.nn as nn
-from torch.utils.data import TensorDataset, Dataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader
 import torchmetrics as tm
 import argparse
 import time
 from pbi_utils.utils import Stats
+from pbi_utils.embeddings_merging_strategies import *
 
 tqdm.pandas() # Initialize tqdm with pandas
 Logging.set_logging_level(DEBUG)
 logger = Logging()
-
-def load_embedding_models(models_list, device: str) -> List[AbstractModel]:
-    # TODO: Refactor this so it is easier to use and understand. Maybe give a way to define the number of arguments and get them automatically, etc
-    models = []
-    for model_info in models_list:
-        # To add a new model, add the corresponding class & switch case. IMPORTANT: The `model_name` must match the class name (You can override the .name() method to change this).
-        model_name = model_info[0]
-        match model_name:
-            case "MegaDNA":
-                if len(model_info) > 1:
-                    weights_path = model_info[1]
-                else:
-                    raise ValueError(f"MegaDNA model for bacteria requires a weights path. Usage: `--bacteria-embedding-model MegaDNA path/to/weights.pt`")
-                models.append(MegaDNA(weights_path=weights_path, device=device))
-
-            case "NT2":
-                if len(model_info) > 1:
-                    hf_model_name = model_info[1]
-                    if hf_model_name not in get_args(NT2.MODEL_NAMES):
-                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2.MODEL_NAMES)}")
-                    models.append(NT2(device, model_name=hf_model_name))
-                else:
-                    models.append(NT2(device))
-            
-            case "NT2_sentence_avg":
-                if len(model_info) > 1:
-                    hf_model_name = model_info[1]
-                    if hf_model_name not in get_args(NT2_sentence_avg.MODEL_NAMES):
-                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_avg.MODEL_NAMES)}")
-                    models.append(NT2_sentence_avg(device, model_name=hf_model_name))
-                else:
-                    models.append(NT2_sentence_avg(device))
-            
-            case "NT2_sentence_max":
-                if len(model_info) > 1:
-                    hf_model_name = model_info[1]
-                    if hf_model_name not in get_args(NT2_sentence_max.MODEL_NAMES):
-                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_max.MODEL_NAMES)}")
-                    models.append(NT2_sentence_max(device, model_name=hf_model_name))
-                else:
-                    models.append(NT2_sentence_max(device))
-            
-            case "NT2_sentence_tfidf":
-                if len(model_info) > 1:
-                    hf_model_name = model_info[1]
-                    if hf_model_name not in get_args(NT2_sentence_tfidf.MODEL_NAMES):
-                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_tfidf.MODEL_NAMES)}")
-                    if len(model_info) > 2:
-                        k = int(model_info[2])
-                    else:
-                        k = 6
-                    if len(model_info) > 3:
-                        overlap = int(model_info[3])
-                    else:
-                        overlap = 0
-                    models.append(NT2_sentence_tfidf(device, model_name=hf_model_name, k=k, overlap=overlap))
-                else:
-                    models.append(NT2_sentence_tfidf(device))
-
-            case "NT2_sentence_tf4idf":
-                if len(model_info) > 1:
-                    hf_model_name = model_info[1]
-                    if hf_model_name not in get_args(NT2_sentence_tf4idf.MODEL_NAMES):
-                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_tf4idf.MODEL_NAMES)}")
-                    if len(model_info) > 2:
-                        k = int(model_info[2])
-                    else:
-                        k = 6
-                    if len(model_info) > 3:
-                        overlap = int(model_info[3])
-                    else:
-                        overlap = 0
-                    models.append(NT2_sentence_tf4idf(device, model_name=hf_model_name, k=k, overlap=overlap))
-                else:
-                    models.append(NT2_sentence_tf4idf(device))
-            
-            case "NT2_sentence_TKPERT":
-                if len(model_info) > 1:
-                    hf_model_name = model_info[1]
-                    if hf_model_name not in get_args(NT2_sentence_TKPERT.MODEL_NAMES):
-                        raise ValueError(f"Model name <{hf_model_name}> for Nucleotide Transformer is not recognized. The following names are supported: {get_args(NT2_sentence_TKPERT.MODEL_NAMES)}")
-                    if len(model_info) > 2:
-                        J = int(model_info[2])
-                    else:
-                        J = 16
-                    if len(model_info) > 3:
-                        gamma = float(model_info[3])
-                    else:
-                        gamma = 20
-                    if len(model_info) > 4:
-                        merging_strategy = model_info[4]
-                        if merging_strategy not in ["avg", "concat"]:
-                            raise ValueError(f"merging_strategy <{merging_strategy}> for NT2_sentence_TKPERT is not recognized. Supported values are: ['avg', 'concat']")
-                    else:
-                        merging_strategy = "concat"
-                    models.append(NT2_sentence_TKPERT(device, model_name=hf_model_name, J=J, gamma=gamma))
-                else:
-                    models.append(NT2_sentence_TKPERT(device))
-            
-            
-            case "DNABERT2":
-                if len(model_info) > 1:
-                    source_code_path = model_info[1]
-                else:
-                    raise ValueError(f"DNABERT2 model requires a path to the downloaded source code. You can download it from `https://huggingface.co/zhihan1996/DNABERT-2-117M?clone=true`, and fix the triton errors (change all `tl.dot(q, k, trans_b=True)` with `tl.dot(q, tl.trans(k))`)")
-                if len(model_info) > 2:
-                    max_seq_len = int(model_info[2])
-                else:
-                    max_seq_len = 2**15
-                models.append(DNABERT2(source_code_path, device, max_seq_len))
-
-            case "EVO":
-                if len(model_info) > 1:
-                    hf_model_name = model_info[1]
-                    if hf_model_name not in get_args(EVO.MODEL_NAMES):
-                        raise ValueError(f"Model name <{hf_model_name}> for EVO is not recognized. The following names are supported: {get_args(EVO.MODEL_NAMES)}")
-                else:
-                    raise ValueError(f"EVO model requires a model name. The following names are supported: {get_args(EVO.MODEL_NAMES)}")
-                if len(model_info) > 2:
-                    max_seq_len = int(model_info[2])
-                else:
-                    max_seq_len = 2**10
-    
-                models.append(EVO(hf_model_name, device, max_seq_len))
-
-            case _:
-                raise ValueError(f"Unknown embedding model: {model_name}")
-
-    return models
 
 def create_embeddings(bacteria_models: List[AbstractModel], phages_models: List[AbstractModel], bacteria_df: pd.DataFrame, phages_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame]:
     logger.info(f"Creating embeddings for {len(bacteria_models)} bacteria models and {len(phages_models)} phage models...")
@@ -297,62 +166,39 @@ def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device:
 
     return cm_mat
 
-def parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-
-    # Input data. Only allow 1 type of data input
-    input_group = parser.add_mutually_exclusive_group(required=True)
-    input_group.add_argument("-i", "--input-perphect", type=str, metavar="INPUT_DIR", help="The path of the folder containing the input data in the Perphect format. The folder must contain the following files: `bacteria_df.csv` (with the columns: `bacterium_id,bacterium_sequence,sequence_length`), `phages_df.csv` (with the columns: `phage_id,phage_sequence,sequence_length`) and `couples_df.csv` (with the columns: `id,bacterium_id,phage_id,interaction_type`, where `interaction_type` is either 1 or 0)")
-
-    # Output
-    parser.add_argument("-e", "--embeddings-dir", type=str, default="/data/embeddings", help="The path where the embeddings will be stored and read from (default = data/embeddings)")
-    parser.add_argument("--use-cached-embeddings", action="store_true", help="Do not calculate embeddings, use cached ones. If set, `embeddings-dir` must point to a correct dir with the existing embeddings")
-    # Train&Test
-    parser.add_argument("--no-train", action="store_true", help="Do not train or test the model, just compute the embeddings")
-    parser.add_argument("--epochs", type=int, default=10, help="Number of epochs to train the classifier model")
-    parser.add_argument("-bs", "--batch-size", type=int, default=128, help="Batch size to use for training and testing of the classifier")
-    parser.add_argument("-lr", "--learning-rate", type=float, default=1e-3, help="Learning rate to use for training with Adam optimizer")
-
-    parser.add_argument("--num-gpu", default=0, type=int, help="Number of GPUs available in the system. If 0, the model is run on the CPU (default = 0)")
-    parser.add_argument("--gpu-id", default=0, type=int, help="Index of GPU to be employed (if 'num-gpu' == 1) (default = 0)")
-
-    # Embedding models. Allow multiple attributes per model
-    parser.add_argument("-pem", "--phages-embedding-model", type=str, nargs="+", required=True, action="append", help="Name and parameters of the embedding model to use for the phages sequences. Use this flag multiple times to use multiple models. To be usede like: `--phages-embedding-model MegaDNA path/to/weights.pt`")
-    parser.add_argument("-bem", "--bacteria-embedding-model", type=str, nargs="+", required=True, action="append", help="Name and parameters of the embedding model to use for the bacteria sequences. Use this flag multiple times to use multiple models. To be usede like: `--phages-embedding-model MegaDNA path/to/weights.pt`")
-
-    return parser.parse_args()
-
 if __name__ == "__main__":
     
     logger.info(f"Running: {' '.join(sys.argv)}")
 
-    args = parse_arguments()
+    # Parse command line args
+    parser = argparse.ArgumentParser(description="PBI Pipeline CLI")
+    parser.add_argument("--config", "-c", required=True, help="Path to YAML config file")
+    cli_args = parser.parse_args()
+    config = parse_config(cli_args.config)
 
-    stats = Stats(args)
+    # Load input data
+    if config.input_perphect is not None:
+        bacteria_df, phages_df, couples_df = PerphectDataInput(input_paths=config.input_perphect).load()
 
-    if args.input_perphect is not None:
-        bacteria_df, phages_df, couples_df = PerphectDataInput(base_path=args.input_perphect).load()
-
-    device = "cpu" if args.num_gpu == 0 else f"cuda:{args.gpu_id}"
+    device = config.device
     logger.debug(f"Running on device: {device}")
 
-    output_manager = H5pyEmbeddingsManager(args.embeddings_dir)
+    output_manager = H5pyEmbeddingsManager(config.embeddings_dir)
 
     
     # Create embeddings (if not cached)
-    if not args.use_cached_embeddings:
-        # Load embedding models
-        bacteria_models = load_embedding_models(args.bacteria_embedding_model, device=device)
-        phages_models = load_embedding_models(args.phages_embedding_model, device=device)
-        create_embeddings(bacteria_models, phages_models, bacteria_df, phages_df, output_manager, overwrite=True)
+    if not config.use_cached_embeddings:
+        create_embeddings(config.bacteria_embedding_models, config.phages_embedding_models, bacteria_df, phages_df, output_manager, overwrite=True)
 
     # Create datasets, train and test classifier
-    if not args.no_train:
+    if not config.no_train:
         # Create train and test datasets
-        bacteria_model_names = [x[0] for x in args.bacteria_embedding_model]
-        phages_model_names = [x[0] for x in args.phages_embedding_model]
+        bacteria_model_names = [x.name() for x in config.bacteria_embedding_models]
+        phages_model_names = [x.name() for x in config.phages_embedding_models]
         dataset = make_dataset(couples_df, bacteria_model_names, phages_model_names , output_manager, device)
         train, test = train_test_split(dataset, test_size=0.2, random_state=42, shuffle=True)
+
+        stats = Stats(config)
 
         # Instantiate classifier
         bacterium_embed_size = len(train["bacterium_embedding"].iloc[0])
@@ -362,13 +208,13 @@ if __name__ == "__main__":
         stats.update_classifier(model)
 
         t = time.perf_counter()
-        cm = train_model(train, model, batch_size=args.batch_size, learning_rate=args.learning_rate, epochs=args.epochs, device=device, use_multiple_gpu=False)
+        cm = train_model(train, model, batch_size=config.batch_size, learning_rate=config.learning_rate, epochs=config.epochs, device=device, use_multiple_gpu=False)
         train_time = time.perf_counter() - t
 
         stats.update_train_results(cm, train_time)
 
         t = time.perf_counter()
-        cm = test_model(test, model, batch_size=args.batch_size, device=device)
+        cm = test_model(test, model, batch_size=config.batch_size, device=device)
         test_time = time.perf_counter() - t
 
         stats.update_test_results(cm, test_time)

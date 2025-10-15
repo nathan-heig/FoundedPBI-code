@@ -4,17 +4,32 @@ from pbi_models.embedders.abstract_model import AbstractModel
 import torch
 from pbi_utils.logging import Logging, logging
 from typing import Literal
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, TfidfTransformer
 from transformers import AutoTokenizer, AutoModelForMaskedLM
-from scipy.stats import beta
+from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
+from pbi_utils.embeddings_merging_strategies.truncate_strategy import TruncateStrategy
 
 logger = Logging()
 
 class NT2(AbstractModel):
     MODEL_NAMES = Literal["nucleotide-transformer-2.5b-multi-species", "nucleotide-transformer-2.5b-1000g", "nucleotide-transformer-500m-human-ref", "nucleotide-transformer-500m-1000g", "nucleotide-transformer-v2-50m-multi-species", "nucleotide-transformer-v2-50m-3mer-multi-species", "nucleotide-transformer-v2-100m-multi-species", "nucleotide-transformer-v2-500m-multi-species", "nucleotide-transformer-v2-250m-multi-species"]
-    def __init__(self, device: str = "cpu", model_name: MODEL_NAMES = "nucleotide-transformer-v2-50m-multi-species"):
+    model_name2short_name = {
+        "nucleotide-transformer-2.5b-multi-species": "v1-2.5B-MS",
+        "nucleotide-transformer-2.5b-1000g": "v1-2.5B-1KG",
+        "nucleotide-transformer-500m-human-ref": "v1-500M-HR",
+        "nucleotide-transformer-500m-1000g": "v1-500M-1KG",
+        "nucleotide-transformer-v2-50m-multi-species": "50M",
+        "nucleotide-transformer-v2-50m-3mer-multi-species": "50M-3mer",
+        "nucleotide-transformer-v2-100m-multi-species": "100M",
+        "nucleotide-transformer-v2-250m-multi-species": "250M",
+        "nucleotide-transformer-v2-500m-multi-species": "500M"
+    }
+    
+    def __init__(self, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", model_name: MODEL_NAMES = "nucleotide-transformer-v2-50m-multi-species"):
 
         self.device = device
+        self.overlap = overlap
+        self.merging_strategy = merging_strategy
+        self.model_name = model_name
 
 
         # Not show internal transformers logging messages
@@ -29,16 +44,47 @@ class NT2(AbstractModel):
 
         self.model.to(self.device)
 
-        self.max_seq_len = self.tokenizer.model_max_length
+        self.max_seq_len = (self.tokenizer.model_max_length - 1) * 6 # NT tokenizes the sequence as 6-mers, and max_seq_len is for the tokenized sequence. (-1 for the special tokens)
+
 
         logger.debug(f"Max sequence length for Nucleotide Transformer: {self.max_seq_len}")
 
     def embed(self, dna_sequence: str) -> torch.Tensor:
-        tokens = self._encode(dna_sequence)
-        
-        return self._embed_from_tokens(tokens)
 
-    def _embed_from_tokens(self, tokens: torch.Tensor) -> torch.Tensor:
+        # Manually split the sequences
+        sequences = self._split_sequence(dna_sequence)
+
+        # Only keep the first chunk if using TruncateStrategy. Bad practice, but much faster
+        if self.merging_strategy.name() == "TruncateStrategy":
+            sequences = [sequences[0]]
+
+        # Get embeddings for each subsequence
+        tokens = self._encode(sequences)
+        embeddings = self._compute_batch_embeddings(tokens)
+        embeddings = embeddings.squeeze(1)
+
+        # Merge the embeddings using the specified strategy
+        merged_embedding = self.merging_strategy.merge(sequences, embeddings)
+        
+        return merged_embedding
+    
+    def _compute_batch_embeddings(self, tokens: torch.Tensor) -> torch.Tensor:
+        embeddings_list = []
+
+        # Batch size is not useful, as it takes almost the same time as doing it one by one and it uses much more memory
+
+        if tokens.shape[0] > 50:
+            tokens = tqdm(tokens, desc="Embedding chunks") # type: ignore
+
+        for sentence in tokens:
+            embeddings = self._compute_single_embedding(sentence.unsqueeze(0))
+            embeddings_list.append(embeddings)
+
+        embeddings = torch.stack(embeddings_list, dim=0)
+
+        return embeddings
+
+    def _compute_single_embedding(self, tokens: torch.Tensor) -> torch.Tensor:
         # Compute the embeddings
         attention_mask = tokens != self.tokenizer.pad_token_id
         output = self.model(
@@ -59,221 +105,20 @@ class NT2(AbstractModel):
 
         return mean_embed
 
-    def _encode(self, dna_sequence: str) -> torch.Tensor:
-        if len(dna_sequence) > self.max_seq_len:
-            logger.debug(f"Found DNA sequence longer than max length ({len(dna_sequence)} vs {self.max_seq_len}), truncating it")
-            # dna_sequence = dna_sequence[:self.max_seq_len]
-        
-        return self.tokenizer.batch_encode_plus([dna_sequence], return_tensors="pt", padding="max_length", max_length = self.max_seq_len, truncation=True)["input_ids"].to(self.device)
-    
-class NT2_sentence_avg(NT2):
-    """ Embeds a DNA sequence by splitting it into chunks of max_seq_len, embedding each chunk with NT2, and averaging the embeddings. """
-
-    def _compute_batch_embeddings(self, tokens: torch.Tensor) -> torch.Tensor:
-        embeddings_list = []
-
-        # Batch size is not useful, as it takes almost the same time as doing it one by one and it uses much more memory
-
-        if tokens.shape[0] > 50:
-            tokens = tqdm(tokens, desc="Embedding chunks") # type: ignore
-
-        for sentence in tokens:
-            embeddings = super()._embed_from_tokens(sentence.unsqueeze(0))
-            embeddings_list.append(embeddings)
-
-        embeddings = torch.stack(embeddings_list, dim=0)
-
-        return embeddings
-
-    def embed(self, dna_sequence: str) -> torch.Tensor:
-        tokens = self._encode(dna_sequence)
-
-        embeddings = self._compute_batch_embeddings(tokens)
-        
-        # Average the embeddings of the tokens in the sequence
-        mean_embed = torch.mean(embeddings, dim=0)
-
-        return mean_embed
-
-    def _encode(self, dna_sequence: str) -> torch.Tensor:
-        # Tokenize the entire sequence at once
-        tokens_ids = self.tokenizer.batch_encode_plus([dna_sequence], return_tensors="pt")["input_ids"].to(self.device)
-
-        # Split the sequence in chunks of max_length
-        tokens_list = []
-        for token_ids in tokens_ids:
-            for i in range(0, len(token_ids), self.max_seq_len):
-                tokens_list.append(token_ids[i : i + self.max_seq_len])
-
-            # Pad with zeros if the last chunk is smaller than self.max_seq_len
-            tokens_list[-1] = torch.nn.functional.pad(tokens_list[-1], (0, self.max_seq_len - len(tokens_list[-1])), value=self.tokenizer.pad_token_id)
-        tokens_ids = torch.stack(tokens_list)
-        return tokens_ids
-    
-class NT2_sentence_max(NT2_sentence_avg):
-    """ Embeds a DNA sequence by splitting it into chunks of max_seq_len, embedding each chunk with NT2, and taking the max of the embeddings. """
-
-    def embed(self, dna_sequence: str) -> torch.Tensor:
-        tokens = self._encode(dna_sequence)
-
-        embeddings = self._compute_batch_embeddings(tokens)
-        
-        # Get the max embeddings of the tokens in the sequence
-        max_embed, _ = torch.max(embeddings, dim=0)
-        
-        return max_embed
-
-class NT2_sentence_tfidf(NT2_sentence_avg):
-    """ Embeds a DNA sequence by splitting it into overlapping chunks of max_seq_len, embedding each chunk with NT2, and averaging the embeddings weighted by TF-IDF weights. """
-
-    def __init__(self, device: str = "cpu", model_name: NT2.MODEL_NAMES = "nucleotide-transformer-v2-50m-multi-species", k: int = 6, overlap: int = 0):
-        super().__init__(device, model_name)
-
-        self.k = k
-        self.overlap = overlap
-
-    def embed(self, dna_sequence: str) -> torch.Tensor:
-        # Manually split the sequences
-        sequences = self._split_sequence(dna_sequence)
-
-        # Get TF-IDF weights for each subsequence
-        weights = self._get_subsequence_weights(sequences)
-
-        # Get embeddings for each subsequence
-        tokens = self._encode(sequences)
-        embeddings = self._compute_batch_embeddings(tokens)
-        embeddings = embeddings.squeeze(1)
-
-        # Perform weighted average using tfidf weights
-        weights = torch.tensor(weights, dtype=embeddings.dtype, device=embeddings.device)
-        weights = weights / weights.sum()
-
-        weighted_embed = torch.sum(embeddings * weights.unsqueeze(1), dim=0).unsqueeze(0)
-        
-        return weighted_embed
-
     # Divide sequence into overlapping subsequences
     def _split_sequence(self, sequence: str) -> list[str]:
-        max_len = (self.max_seq_len - 1) * 6 # NT tokenizes the sequence as 6-mers, and max_seq_len is for the tokenized sequence. (-1 for the special tokens)
-        step = max_len - self.overlap
-        subsequences = [sequence[i:i+max_len] for i in range(0, len(sequence), step)]
+        step = self.max_seq_len - self.overlap
+        subsequences = [sequence[i:i+self.max_seq_len] for i in range(0, len(sequence), step)]
         return subsequences
-
-    # Convert subsequences into k-mer "documents" (Add space between k-mers) to use with TfidfVectorizer
-    def _get_kmers(self, seq: str) -> str:
-        return " ".join(seq[i:i+self.k] for i in range(len(seq) - self.k + 1))
-        
-    def _get_subsequence_weights(self, subsequences: list[str]) -> np.ndarray:
-        """
-        Co-authored by ChatGPT.
-        """
-        docs = [self._get_kmers(subseq) for subseq in subsequences]
-        
-        # Compute TF-IDF matrix
-        vectorizer = TfidfVectorizer(analyzer='word', token_pattern=r'[^ ]+')
-        tfidf_matrix = vectorizer.fit_transform(docs)
-        
-        # Compute weight per subsequence (mean TF-IDF). We could also use sum, max, etc.
-        weights = np.asarray(tfidf_matrix.mean(axis=1)).flatten() # type: ignore
-        
-        # Normalize weights so they sum to 1
-        if weights.sum() > 0:
-            weights = weights / weights.sum()
-        
-        return weights
-
+    
     def _encode(self, dna_sequence: list[str]) -> torch.Tensor:
         # Tokenize the entire sequence at once
         tokens_ids = self.tokenizer.batch_encode_plus(dna_sequence, return_tensors="pt", padding=True)["input_ids"].to(self.device)
         
         return tokens_ids
 
-class NT2_sentence_tf4idf(NT2_sentence_tfidf):
-    """ Embeds a DNA sequence by splitting it into overlapping chunks of max_seq_len, embedding each chunk with NT2, and averaging the embeddings weighted by TF4-IDF weights. """
-      
-    def _get_subsequence_weights(self, subsequences: list[str]) -> np.ndarray:
-        """
-        Get TF4-IDF weights for each subsequence. Variant of TF-IDF described in https://arxiv.org/pdf/2304.14796, wich achieves better results in natural text.
-        """
-        docs = [self._get_kmers(subseq) for subseq in subsequences]
-
-        # Compute raw term frequencies using CountVectorizer
-        vectorizer = CountVectorizer(analyzer='word', token_pattern=r'[^ ]+')
-        term_counts = vectorizer.fit_transform(docs).toarray().astype(float)  # type: ignore # shape: (num_docs, num_terms)
-
-        # Apply TF4 formula
-        max_freq_per_doc = term_counts.max(axis=1, keepdims=True)
-        max_freq_per_doc[max_freq_per_doc == 0] = 1  # avoid div by zero
-        tf4 = 0.4 + 0.6 * (term_counts / max_freq_per_doc)
-
-        # Compute IDF
-        transformer = TfidfTransformer(norm=None, use_idf=True, smooth_idf=True, sublinear_tf=False)
-        transformer.fit(term_counts)
-        idf = transformer.idf_  # shape: (num_terms,)
-
-        # Combine TF4 and IDF
-        tfidf_tf4 = tf4 * idf  # (num_docs, num_terms)
-
-        # Aggregate to one weight per subsequence (mean TF4-IDF per doc). As before, we could also use sum, max, etc.
-        weights = tfidf_tf4.mean(axis=1)
-
-        # Normalize weights
-        weights = np.maximum(weights, 0) # avoid negative weights (which should never happen, but just in case)
-        weights = weights / weights.sum()
-
-        return weights
-
-class NT2_sentence_TKPERT(NT2_sentence_avg):
-    """ Embeds a DNA sequence by splitting it into overlapping chunks of max_seq_len, embedding each chunk with NT2, and concatenating the embeddings weighted by TK-PERT weights. """
-
-    def __init__(self, device: str = "cpu", model_name: NT2.MODEL_NAMES = "nucleotide-transformer-v2-50m-multi-species", J: int = 16, gamma: float = 20, merging_strategy: Literal["avg", "concat"] = "concat"):
-        """ J: Number of windows. gamma: Shape parameter for the PERT distribution. """
-        super().__init__(device, model_name)
-
-        self.J = J
-        self.gamma = gamma
-        self.merging_strategy = merging_strategy
-
-    def embed(self, dna_sequence: str) -> torch.Tensor:
-        tokens = self._encode(dna_sequence)
-
-        embeddings = self._compute_batch_embeddings(tokens).squeeze(1)
-        
-        embed = self.tk_pert_embedding(embeddings)
-        
-        return embed
+    def name(self) -> str:
+        return f"NT2-{self.merging_strategy.name()}-{self.model_name2short_name[self.model_name]}"
     
-    # ---------- PERT-related utilities ----------
-    # Coauthored by ChatGPT
-    def pert_pdf(self, x, min_val:float=0.0, mode:float=0.5, max_val:float=1.0):
-        """Modified PERT probability density function."""
-        alpha = 1 + self.gamma * ((mode - min_val) / (max_val - min_val))
-        beta_param = 1 + self.gamma * ((max_val - mode) / (max_val - min_val))
-        return beta.pdf(x, alpha, beta_param)
-    
-    def tk_pert_weights(self, num_segments: int) -> torch.Tensor:
-        """Compute TK-PERT positional weights for each segment and each window."""
-        xs = np.linspace(0, 1, num_segments)
-        centers = np.linspace(0, 1, self.J)
-        weights = []
-        for c in centers:
-            w = self.pert_pdf(xs, 0.0, c, 1.0)
-            w = np.maximum(w, 1e-12)
-            w = w / w.sum()
-            weights.append(w)
-        weights = np.stack(weights)  # (J, N)
-        return torch.tensor(weights, dtype=torch.float32)
-    
-    def tk_pert_embedding(self, embeddings: torch.Tensor) -> torch.Tensor:
-        """Compute the TK-PERT concatenated embedding from subsequence embeddings."""
-        num_segments, _ = embeddings.shape
-        W = self.tk_pert_weights(num_segments).to(embeddings.device)
-        weighted_parts = torch.matmul(W, embeddings)  # (J, dim)
-        weighted_parts = torch.nn.functional.normalize(weighted_parts, dim=1)
-
-        if self.merging_strategy == "avg":
-            return torch.mean(weighted_parts, dim=0, keepdim=True)  # shape: (1, dim)
-        elif self.merging_strategy == "concat":
-            return weighted_parts.flatten().unsqueeze(0)  # shape: (1, J * dim,)
-        else:
-            raise ValueError(f"Unknown merging strategy: {self.merging_strategy}")
+    def __repr__(self):
+        return f"NT2(merging_strategy={self.merging_strategy}, overlap={self.overlap}, model_name='{self.model_name}')"

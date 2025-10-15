@@ -110,11 +110,10 @@ class InputManager(ABC):
         pass
 
 class PerphectDataInput(InputManager):
-    def __init__(self, base_path: str) -> None:
-        self.base_path = base_path if base_path[-1] == "/" else base_path + "/"
-        self.bacteria_path = os.path.join(base_path, "bacteria_df.csv")
-        self.phages_path = os.path.join(base_path, "phages_df.csv")
-        self.couples_path = os.path.join(base_path, "couples_df.csv")
+    def __init__(self, input_paths) -> None:
+        self.bacteria_path = input_paths.bacteria_df
+        self.phages_path = input_paths.phages_df
+        self.couples_path = input_paths.couples_df
 
         if not os.path.isfile(self.bacteria_path):
             logger.warning(f"Bacteria file not found. Path tried: {self.bacteria_path}")
@@ -123,7 +122,7 @@ class PerphectDataInput(InputManager):
         if not os.path.isfile(self.couples_path):
             logger.warning(f"Couples file not found. Path tried: {self.couples_path}")
 
-        logger.info(f"Perphect input files will be read from {base_path}")
+        logger.info(f"Perphect input files will be read from {self.bacteria_path}, {self.phages_path} and {self.couples_path}")
 
     
     def load(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -131,8 +130,7 @@ class PerphectDataInput(InputManager):
         # wc = int(subprocess.run([f"cat {self.base_path}*.csv | wc -l"], capture_output=True, shell=True).stdout) # line count of the files, but read_csv does not reach the end idk why
 
         logger.info("Reading csv files...")
-        with tqdm() as bar:
-            couples_df = pd.read_csv(self.couples_path, skiprows=lambda x: bar.update(1) and False) # type: ignore
-            bacteria_df = pd.read_csv(self.bacteria_path, skiprows=lambda x: bar.update(1) and False) # type: ignore
-            phages_df = pd.read_csv(self.phages_path, skiprows=lambda x: bar.update(1) and False) # type: ignore
+        couples_df = pd.read_csv(self.couples_path)
+        bacteria_df = pd.read_csv(self.bacteria_path)
+        phages_df = pd.read_csv(self.phages_path)
         return bacteria_df, phages_df, couples_df
