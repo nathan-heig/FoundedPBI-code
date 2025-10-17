@@ -1,5 +1,3 @@
-import numpy as np
-from tqdm import tqdm
 from pbi_models.embedders.abstract_model import AbstractModel
 import torch
 from pbi_utils.logging import Logging, logging
@@ -23,11 +21,11 @@ class NT2(AbstractModel):
         "nucleotide-transformer-v2-250m-multi-species": "250M",
         "nucleotide-transformer-v2-500m-multi-species": "500M"
     }
-    
+
     def __init__(self, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", model_name: MODEL_NAMES = "nucleotide-transformer-v2-50m-multi-species"):
 
         self.device = device
-        self.overlap = overlap
+        self.overlap = int(overlap)
         self.merging_strategy = merging_strategy
         self.model_name = model_name
 
@@ -49,41 +47,6 @@ class NT2(AbstractModel):
 
         logger.debug(f"Max sequence length for Nucleotide Transformer: {self.max_seq_len}")
 
-    def embed(self, dna_sequence: str) -> torch.Tensor:
-
-        # Manually split the sequences
-        sequences = self._split_sequence(dna_sequence)
-
-        # Only keep the first chunk if using TruncateStrategy. Bad practice, but much faster
-        if self.merging_strategy.name() == "TruncateStrategy":
-            sequences = [sequences[0]]
-
-        # Get embeddings for each subsequence
-        tokens = self._encode(sequences)
-        embeddings = self._compute_batch_embeddings(tokens)
-        embeddings = embeddings.squeeze(1)
-
-        # Merge the embeddings using the specified strategy
-        merged_embedding = self.merging_strategy.merge(sequences, embeddings)
-        
-        return merged_embedding
-    
-    def _compute_batch_embeddings(self, tokens: torch.Tensor) -> torch.Tensor:
-        embeddings_list = []
-
-        # Batch size is not useful, as it takes almost the same time as doing it one by one and it uses much more memory
-
-        if tokens.shape[0] > 50:
-            tokens = tqdm(tokens, desc="Embedding chunks") # type: ignore
-
-        for sentence in tokens:
-            embeddings = self._compute_single_embedding(sentence.unsqueeze(0))
-            embeddings_list.append(embeddings)
-
-        embeddings = torch.stack(embeddings_list, dim=0)
-
-        return embeddings
-
     def _compute_single_embedding(self, tokens: torch.Tensor) -> torch.Tensor:
         # Compute the embeddings
         attention_mask = tokens != self.tokenizer.pad_token_id
@@ -104,12 +67,6 @@ class NT2(AbstractModel):
         mean_embed = torch.sum(attention_mask_unsq*embeddings, axis=-2)/torch.sum(attention_mask_unsq, axis=1) # type: ignore
 
         return mean_embed
-
-    # Divide sequence into overlapping subsequences
-    def _split_sequence(self, sequence: str) -> list[str]:
-        step = self.max_seq_len - self.overlap
-        subsequences = [sequence[i:i+self.max_seq_len] for i in range(0, len(sequence), step)]
-        return subsequences
     
     def _encode(self, dna_sequence: list[str]) -> torch.Tensor:
         # Tokenize the entire sequence at once
@@ -118,7 +75,7 @@ class NT2(AbstractModel):
         return tokens_ids
 
     def name(self) -> str:
-        return f"NT2-{self.merging_strategy.name()}-{self.model_name2short_name[self.model_name]}"
+        return f"NT2-{self.merging_strategy.name()}-{self.model_name2short_name[self.model_name]}-ov{self.overlap}"
     
     def __repr__(self):
         return f"NT2(merging_strategy={self.merging_strategy}, overlap={self.overlap}, model_name='{self.model_name}')"

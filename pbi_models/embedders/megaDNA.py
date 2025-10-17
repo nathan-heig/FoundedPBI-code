@@ -1,37 +1,44 @@
+from typing import Literal
 from pbi_models.embedders.abstract_model import AbstractModel
 import torch
-import numpy as np
 import os
 import urllib.request
+from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
+from pbi_utils.embeddings_merging_strategies.truncate_strategy import TruncateStrategy
 from pbi_utils.logging import Logging
 from functools import reduce
 
-from pbi_utils.utils import clean_gpu
 logger = Logging()
 
 class MegaDNA(AbstractModel):
-    def __init__(self, weights_path: str, device: str = "cpu") -> None:
+    def __init__(self, weights_path: str, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", get_layer: Literal["concat", "last"] = "last") -> None:
         if not os.path.isfile(weights_path):
             logger.warning(f"Weights not found, downloading them again and saving them to: {weights_path}")
             os.makedirs(weights_path.rsplit("/", maxsplit=1)[0], exist_ok=True)
             urllib.request.urlretrieve("https://huggingface.co/lingxusb/megaDNA_updated/resolve/main/megaDNA_phage_145M.pt", weights_path)
 
+        self.merging_strategy = merging_strategy
+        self.overlap = int(overlap)
+
         self.device = device
         self.model = torch.load(weights_path, map_location=torch.device(device))
         self.model.eval()
 
+        self.get_layer = get_layer
+
         self.max_seq_len = reduce(lambda x, y: x*y, self.model.max_seq_len)-1
         logger.debug(f"Max sequence length for megaDNA: {self.max_seq_len}")
 
-    def embed(self, dna_sequence: str) -> torch.Tensor:
-        clean_gpu()
+    def _compute_single_embedding(self, tokens: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
-            input_seq = self._encode(dna_sequence)
-            output = self.model(input_seq, return_value = 'embedding')
+            output = self.model(tokens, return_value = 'embedding')
 
-        # In the paper, they concatenated all three embeddings, here I'm only returning the last one
-        last_embed = output[-1]
-        mean_embed = last_embed.mean(dim=(0,1))
+        if self.get_layer == "last":
+            last_embed = output[-1]
+            mean_embed = last_embed.mean(dim=(0,1)).unsqueeze(0) # torch.Size([1, 196])
+        else: # concat
+            output = [o.mean(dim=(0,1), keepdim=True) for o in output]
+            mean_embed = torch.cat(output, dim=2).squeeze(0) # torch.Size([1, 196 + 256 + 512])
 
         return mean_embed
 
@@ -45,7 +52,12 @@ class MegaDNA(AbstractModel):
             case "#": return 5
             case _: return 0
 
-    def _encode(self, dna_sequence: str) -> torch.Tensor:
+    def _encode(self, dna_sequences: list[str]) -> torch.Tensor:
+        # Encode a batch of sequences
+        encoded_sequences = [self._encode_single(seq) for seq in dna_sequences]
+        return torch.cat(encoded_sequences, dim=0)
+
+    def _encode_single(self, dna_sequence: str) -> torch.Tensor:
         if len(dna_sequence) > self.max_seq_len:
             logger.debug(f"Found DNA sequence longer than max length ({len(dna_sequence)} vs {self.max_seq_len}), trimming it")
             dna_sequence = dna_sequence[:self.max_seq_len]
@@ -56,3 +68,9 @@ class MegaDNA(AbstractModel):
 
 
         return torch.tensor([self.__vocabulary(nt) for nt in dna_sequence] + [self.__vocabulary("#")], device=self.device).unsqueeze(dim=0)
+    
+    def name(self) -> str:
+        return f"MegaDNA-{self.merging_strategy.name()}-{self.get_layer}-ov{self.overlap}"
+    
+    def __repr__(self):
+        return f"MegaDNA(merging_strategy={self.merging_strategy}, overlap={self.overlap}, get_layer='{self.get_layer}')"

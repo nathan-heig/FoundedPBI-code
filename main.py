@@ -30,7 +30,8 @@ def create_embeddings(bacteria_models: List[AbstractModel], phages_models: List[
     phages_encoded["phage_id"] = phages_df["phage_id"]
 
     # Create all the embeddings for one model and then save them all at once
-    for phages_model in tqdm(phages_models, unit="models", desc="Creating phage embeddings"):
+    for phages_model in phages_models:
+        logger.debug(f"Creating phage embeddings for model {phages_model.name()}...")
         phages_encoded[f"embedding_{phages_model.name()}"] = phages_df.progress_apply(lambda row: phages_model.embed(row["phage_sequence"]), axis=1) # type: ignore
         output_manager.save_embeddings_batch(phages_encoded["phage_id"], phages_encoded[f"embedding_{phages_model.name()}"], model_name=phages_model.name(), overwrite=overwrite) # type: ignore
     
@@ -40,7 +41,8 @@ def create_embeddings(bacteria_models: List[AbstractModel], phages_models: List[
     bacteria_encoded["bacterium_id"] = bacteria_df["bacterium_id"]
 
     # Create all the embeddings for one model and then save them all at once
-    for bacteria_model in tqdm(bacteria_models, unit="models", desc="Creating bacteria embeddings"):
+    for bacteria_model in bacteria_models:
+        logger.debug(f"Creating bacteria embeddings for model {bacteria_model.name()}...")
         bacteria_encoded[f"embedding_{bacteria_model.name()}"] = bacteria_df.progress_apply(lambda row: bacteria_model.embed(row["bacterium_sequence"]), axis=1) # type: ignore
         output_manager.save_embeddings_batch(bacteria_encoded["bacterium_id"], bacteria_encoded[f"embedding_{bacteria_model.name()}"], model_name=bacteria_model.name(), overwrite=overwrite) # type: ignore
     

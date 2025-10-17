@@ -19,7 +19,7 @@ class StrategyConfig(BaseModel):
 class ModelConfig(BaseModel):
     name: str
     params: Dict[str, Any] = Field(default_factory=dict)
-    strategy: StrategyConfig
+    strategy: StrategyConfig | str
 
 class InputConfig(BaseModel):
     bacteria_df: str
@@ -63,7 +63,10 @@ class Config:
     def _parse_models(self, models_config: List[ModelConfig]) -> List[AbstractModel]:
         models = []
         for model_config in models_config:
-            merging_strategy = self._get_instance_from_string(model_config.strategy.name)(**model_config.strategy.params)
+            if isinstance(model_config.strategy, str):
+                merging_strategy = self._get_instance_from_string(model_config.strategy)()
+            else:
+                merging_strategy = self._get_instance_from_string(model_config.strategy.name)(**model_config.strategy.params)
 
             model_params = model_config.params
             model_params['merging_strategy'] = merging_strategy
@@ -89,7 +92,8 @@ class Config:
     
 def parse_config(config_path: str) -> Config:
     with open(config_path, 'r') as f:
-        config_dict = yaml.safe_load(f)
+        # config_dict = yaml.safe_load(f)
+        config_dict = yaml.safe_load(os.path.expandvars(f.read()))
     yaml_config = YAMLConfig(**config_dict)
 
     c = Config(yaml_config)
