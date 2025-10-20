@@ -69,8 +69,9 @@ class Config:
                 merging_strategy = self._get_instance_from_string(model_config.strategy.name)(**model_config.strategy.params)
 
             model_params = model_config.params
-            model_params['merging_strategy'] = merging_strategy
-            model_params['device'] = self.device
+            model_params["merging_strategy"] = merging_strategy
+            model_params["device"] = self.device
+            model_params["load_model"] = not self.use_cached_embeddings
 
             model = self._get_instance_from_string(model_config.name)(**model_params)
             models.append(model)

@@ -1,0 +1,73 @@
+# input_perphect: data/perphect-data/dummy
+input_perphect:
+  bacteria_df: data/perphect-data/all/bacteria_df.csv
+  phages_df: data/perphect-data/all/phages_df.csv
+  couples_df: data/perphect-data/all-private-oversampled/couples_df.csv
+embeddings_dir: data/embeddings
+# embeddings_dir: data/embeddings-dummy
+num_gpu: 1
+gpu_id: 3
+use_cached_embeddings: true
+epochs: 50
+
+phages_embedding_models:
+  - name: NT2
+    params: 
+      model_name: nucleotide-transformer-v2-250m-multi-species
+      overlap: 0
+    strategy: TruncateStrategy
+    # strategy:
+    #   name: TKPertStrategy
+    #   params:
+    #     merging_strategy: concat # concat or avg
+  
+  - name: MegaDNA
+    params: 
+      weights_path: data/weights/megaDNA_phage_145M.pt
+      get_layer: avg
+      overlap: 0
+    strategy: MaxStrategy
+    # strategy: TruncateStrategy
+    # strategy:
+    #   name: TKPertStrategy
+    #   params:
+    #     merging_strategy: concat # concat or avg
+
+  - name: DNABERT2
+    params: 
+      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
+      max_seq_len: 32768
+      overlap: 0
+    strategy: MaxStrategy
+    # strategy: TruncateStrategy
+
+bacteria_embedding_models:
+  - name: NT2
+    params: 
+      model_name: nucleotide-transformer-v2-250m-multi-species
+      overlap: 0
+    strategy: TruncateStrategy
+    # strategy:
+    #   name: TKPertStrategy
+    #   params:
+    #     merging_strategy: concat # concat or avg
+  
+  - name: MegaDNA
+    params: 
+      weights_path: data/weights/megaDNA_phage_145M.pt
+      get_layer: avg
+      overlap: 0
+    strategy: MaxStrategy
+    # strategy: TruncateStrategy
+    # strategy:
+    #   name: TKPertStrategy
+    #   params:
+    #     merging_strategy: concat # concat or avg
+  
+  - name: DNABERT2
+    params: 
+      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
+      max_seq_len: 32768
+      overlap: 0
+    strategy: MaxStrategy
+    # strategy: TruncateStrategy

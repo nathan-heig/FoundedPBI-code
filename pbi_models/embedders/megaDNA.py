@@ -11,23 +11,28 @@ from functools import reduce
 logger = Logging()
 
 class MegaDNA(AbstractModel):
-    def __init__(self, weights_path: str, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", get_layer: Literal["concat", "last"] = "last") -> None:
-        if not os.path.isfile(weights_path):
-            logger.warning(f"Weights not found, downloading them again and saving them to: {weights_path}")
-            os.makedirs(weights_path.rsplit("/", maxsplit=1)[0], exist_ok=True)
-            urllib.request.urlretrieve("https://huggingface.co/lingxusb/megaDNA_updated/resolve/main/megaDNA_phage_145M.pt", weights_path)
+    def __init__(self, weights_path: str, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", get_layer: Literal["concat", "last"] = "last", load_model: bool = True) -> None:
+
+        self.load_model = load_model
+
+
+        if self.load_model:
+            if not os.path.isfile(weights_path):
+                logger.warning(f"Weights not found, downloading them again and saving them to: {weights_path}")
+                os.makedirs(weights_path.rsplit("/", maxsplit=1)[0], exist_ok=True)
+                urllib.request.urlretrieve("https://huggingface.co/lingxusb/megaDNA_updated/resolve/main/megaDNA_phage_145M.pt", weights_path)
+
+            self.device = device
+            self.model = torch.load(weights_path, map_location=torch.device(device))
+            self.model.eval()
+            self.max_seq_len = reduce(lambda x, y: x*y, self.model.max_seq_len)-1
+            logger.debug(f"Max sequence length for megaDNA: {self.max_seq_len}")
 
         self.merging_strategy = merging_strategy
         self.overlap = int(overlap)
 
-        self.device = device
-        self.model = torch.load(weights_path, map_location=torch.device(device))
-        self.model.eval()
-
         self.get_layer = get_layer
 
-        self.max_seq_len = reduce(lambda x, y: x*y, self.model.max_seq_len)-1
-        logger.debug(f"Max sequence length for megaDNA: {self.max_seq_len}")
 
     def _compute_single_embedding(self, tokens: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():

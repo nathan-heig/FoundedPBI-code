@@ -9,10 +9,18 @@ from tqdm import tqdm
 class AbstractModel(ABC):
 
     @abstractmethod
-    def __init__(self, max_seq_len: int, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0) -> None:
+    def __init__(self, max_seq_len: int, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, load_model: bool = True) -> None:
+        """Abstract class for DNA sequence embedding models.
+        Args:
+            max_seq_len (int): Maximum sequence length for the model.
+            merging_strategy (AbstractMergerStrategy, optional): Strategy to merge embeddings from subsequences. Defaults to TruncateStrategy().
+            overlap (int, optional): Overlap size between subsequences. Defaults to 0.
+            load_model (bool, optional): Whether to load the model for embedding computation. Defaults to True. If False, the embed method will raise an error, and should only be used to get the class name.
+        """
         self.merging_strategy = merging_strategy
         self.overlap = int(overlap)
         self.max_seq_len = int(float(max_seq_len))
+        self.load_model = load_model
         super().__init__()
 
     def embed(self, dna_sequence:str) -> torch.Tensor:
@@ -21,6 +29,10 @@ class AbstractModel(ABC):
         and then the embeddings for each subsequence are computed using the function _compute_single_embedding that the child class must also implement.
         Finally, the embeddings are merged using the specified merging strategy.
         """
+
+        if not self.load_model:
+            raise RuntimeError("Model not loaded. If you want to compute embeddings, please set load_model to True when initializing the class.")
+
         # Manually split the sequences
         sequences = self._split_sequence(dna_sequence)
 

@@ -22,30 +22,32 @@ class NT2(AbstractModel):
         "nucleotide-transformer-v2-500m-multi-species": "500M"
     }
 
-    def __init__(self, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", model_name: MODEL_NAMES = "nucleotide-transformer-v2-50m-multi-species"):
+    def __init__(self, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", model_name: MODEL_NAMES = "nucleotide-transformer-v2-50m-multi-species", load_model: bool = True):
 
         self.device = device
         self.overlap = int(overlap)
         self.merging_strategy = merging_strategy
         self.model_name = model_name
 
+        self.load_model = load_model
 
-        # Not show internal transformers logging messages
-        current_log_level = logging.root.level
-        Logging.set_logging_level()
-        
-        self.tokenizer = AutoTokenizer.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
-        self.model = AutoModelForMaskedLM.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
-        
-        Logging.set_logging_level(current_log_level)
-
-
-        self.model.to(self.device)
-
-        self.max_seq_len = (self.tokenizer.model_max_length - 1) * 6 # NT tokenizes the sequence as 6-mers, and max_seq_len is for the tokenized sequence. (-1 for the special tokens)
+        if self.load_model:
+            # Not show internal transformers logging messages
+            current_log_level = logging.root.level
+            Logging.set_logging_level()
+            
+            self.tokenizer = AutoTokenizer.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
+            self.model = AutoModelForMaskedLM.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
+            
+            Logging.set_logging_level(current_log_level)
 
 
-        logger.debug(f"Max sequence length for Nucleotide Transformer: {self.max_seq_len}")
+            self.model.to(self.device)
+
+            self.max_seq_len = (self.tokenizer.model_max_length - 1) * 6 # NT tokenizes the sequence as 6-mers, and max_seq_len is for the tokenized sequence. (-1 for the special tokens)
+
+            logger.debug(f"Max sequence length for Nucleotide Transformer: {self.max_seq_len}")
+
 
     def _compute_single_embedding(self, tokens: torch.Tensor) -> torch.Tensor:
         # Compute the embeddings
