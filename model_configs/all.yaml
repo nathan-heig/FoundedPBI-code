@@ -6,7 +6,7 @@ input_perphect:
 embeddings_dir: data/embeddings
 # embeddings_dir: data/embeddings-dummy
 num_gpu: 1
-gpu_id: 3
+gpu_id: 1
 use_cached_embeddings: true
 epochs: 50
 
@@ -73,3 +73,6 @@ bacteria_embedding_models:
       overlap: 0
     strategy: TKPertStrategy
     # strategy: TruncateStrategy
+
+classifier: 
+  name: LinearClassifier

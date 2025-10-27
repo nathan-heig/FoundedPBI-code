@@ -5,7 +5,7 @@ from tqdm import tqdm
 from pbi_utils.config_parser import parse_config
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
 from pbi_utils.logging import Logging, INFO, DEBUG
-from pbi_models.classifiers.base import BasicClassifier
+from pbi_models.classifiers.abstract_classifier import AbstractClassifier
 from pbi_models.embedders.abstract_model import AbstractModel
 from typing import Tuple, List
 from sklearn.model_selection import train_test_split
@@ -210,7 +210,8 @@ if __name__ == "__main__":
         # Instantiate classifier
         bacterium_embed_size = len(train["bacterium_embedding"].iloc[0])
         phage_embed_size = len(train["phage_embedding"].iloc[0])
-        model = BasicClassifier(bacterium_embed_size, phage_embed_size, hidden_dim=256)
+        # model = BasicClassifier(bacterium_embed_size, phage_embed_size, hidden_dim=256)
+        model = config.classifier(bacterium_embed_size, phage_embed_size, **config.classifier_params)
 
         stats.update_classifier(model)
 

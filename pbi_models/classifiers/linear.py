@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
 from pbi_utils.logging import Logging
 from pbi_models.classifiers.abstract_classifier import AbstractClassifier
 

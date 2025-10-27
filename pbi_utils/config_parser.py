@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any
 from pbi_utils.embeddings_merging_strategies import *
 from pbi_models.embedders import *
+from pbi_models.classifiers import *
+from pbi_models.classifiers.abstract_classifier import AbstractClassifier
 from pbi_models.embedders.abstract_model import AbstractModel
 from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
 from pbi_utils.logging import Logging
@@ -25,6 +27,10 @@ class InputConfig(BaseModel):
     phages_df: str
     couples_df: str
 
+class ClassifierConfig(BaseModel):
+    name: str
+    params: Dict[str, Any] = Field(default_factory=dict)
+
 class YAMLConfig(BaseModel):
     input_perphect: str | InputConfig # The path of the folder containing the input data in the Perphect format. The folder must contain the following files: `bacteria_df.csv` (with the columns: `bacterium_id,bacterium_sequence,sequence_length`), `phages_df.csv` (with the columns: `phage_id,phage_sequence,sequence_length`) and `couples_df.csv` (with the columns: `id,bacterium_id,phage_id,interaction_type`, where `interaction_type` is either 1 or 0)
     embeddings_dir: str = "data/embeddings" # The path where the embeddings will be stored and read from (default = data/embeddings)
@@ -37,6 +43,7 @@ class YAMLConfig(BaseModel):
     learning_rate: float = 1e-3 # Learning rate to use for training with Adam optimizer
     phages_embedding_models: List[ModelConfig] = Field(default_factory=list) # Name and parameters of the embedding model to use for the phages sequences. Use this flag multiple times to use multiple models
     bacteria_embedding_models: List[ModelConfig] = Field(default_factory=list) # Name and parameters of the embedding model to use for the bacteria sequences. Use this flag multiple times to use multiple models
+    classifier: ClassifierConfig = Field(default_factory=lambda: ClassifierConfig(name="LinearClassifier", params={})) # Model to use to classify the embeddings. Must be a subclass of `AbstractClassifier`, implemented in `pbi_models.classifiers`
     torch_num_threads: int = -1 # Number of threads used by PyTorch. If -1, the maximum number of threads is used
 
 class Config:
@@ -59,38 +66,44 @@ class Config:
         self.device = "cpu" if self.num_gpu == 0 else f"cuda:{self.gpu_id}"
         self.phages_embedding_models = self._parse_models(yaml_config.phages_embedding_models)
         self.bacteria_embedding_models = self._parse_models(yaml_config.bacteria_embedding_models)
+        self.classifier = self._get_instance_from_string(yaml_config.classifier.name, subclass_of=AbstractClassifier) # The classifier is not instantiated yet because we need to know the embedding dimensions first, and that is only known after loading them (in main.py)
+        self.classifier_params = yaml_config.classifier.params
         self.torch_num_threads = yaml_config.torch_num_threads
 
     def _parse_models(self, models_config: List[ModelConfig]) -> List[AbstractModel]:
         models = []
         for model_config in models_config:
             if isinstance(model_config.strategy, str):
-                merging_strategy = self._get_instance_from_string(model_config.strategy)()
+                merging_strategy = self._get_instance_from_string(model_config.strategy, subclass_of=AbstractMergerStrategy)()
             else:
-                merging_strategy = self._get_instance_from_string(model_config.strategy.name)(**model_config.strategy.params)
+                merging_strategy = self._get_instance_from_string(model_config.strategy.name, subclass_of=AbstractMergerStrategy)(**model_config.strategy.params)
 
             model_params = model_config.params
             model_params["merging_strategy"] = merging_strategy
             model_params["device"] = self.device
             model_params["load_model"] = not self.use_cached_embeddings
 
-            model = self._get_instance_from_string(model_config.name)(**model_params)
+            model = self._get_instance_from_string(model_config.name, subclass_of=AbstractModel)(**model_params)
             models.append(model)
         return models
 
-    def _get_instance_from_string(self, class_name: str):
-        if class_name in globals() and (issubclass(globals()[class_name], AbstractModel) or issubclass(globals()[class_name], AbstractMergerStrategy)):
+    def _get_instance_from_string(self, class_name: str, subclass_of: type):
+        if class_name in globals() and issubclass(globals()[class_name], subclass_of):
             model_class = globals()[class_name]
             return model_class
         else:
-            raise ValueError(f"Class {class_name} not found or is not a subclass of AbstractModel or AbstractMergerStrategy")
+            raise ValueError(f"Class {class_name} not found or is not a subclass of {subclass_of.__name__}.")
 
     def __repr__(self):
         return (f"Config(input_perphect={self.input_perphect}, embeddings_dir={self.embeddings_dir}, "
                 f"num_gpu={self.num_gpu}, gpu_id={self.gpu_id}, use_cached_embeddings={self.use_cached_embeddings}, "
                 f"no_train={self.no_train}, epochs={self.epochs}, batch_size={self.batch_size}, "
                 f"learning_rate={self.learning_rate}, phages_embedding_models={self.phages_embedding_models}, "
-                f"bacteria_embedding_models={self.bacteria_embedding_models})")
+                f"bacteria_embedding_models={self.bacteria_embedding_models}, "
+                f"torch_num_threads={self.torch_num_threads}, "
+                f"classifier={self.classifier.__name__}({self.classifier_params})"
+                f")"
+                )
     
 def parse_config(config_path: str) -> Config:
     with open(config_path, 'r') as f:
