@@ -15,7 +15,6 @@ class StrategyConfig(BaseModel):
     name: str
     params: Dict[str, Any] = Field(default_factory=dict)
 
-
 class ModelConfig(BaseModel):
     name: str
     params: Dict[str, Any] = Field(default_factory=dict)
@@ -38,6 +37,7 @@ class YAMLConfig(BaseModel):
     learning_rate: float = 1e-3 # Learning rate to use for training with Adam optimizer
     phages_embedding_models: List[ModelConfig] = Field(default_factory=list) # Name and parameters of the embedding model to use for the phages sequences. Use this flag multiple times to use multiple models
     bacteria_embedding_models: List[ModelConfig] = Field(default_factory=list) # Name and parameters of the embedding model to use for the bacteria sequences. Use this flag multiple times to use multiple models
+    torch_num_threads: int = -1 # Number of threads used by PyTorch. If -1, the maximum number of threads is used
 
 class Config:
     def __init__(self, yaml_config: YAMLConfig):
@@ -59,6 +59,7 @@ class Config:
         self.device = "cpu" if self.num_gpu == 0 else f"cuda:{self.gpu_id}"
         self.phages_embedding_models = self._parse_models(yaml_config.phages_embedding_models)
         self.bacteria_embedding_models = self._parse_models(yaml_config.bacteria_embedding_models)
+        self.torch_num_threads = yaml_config.torch_num_threads
 
     def _parse_models(self, models_config: List[ModelConfig]) -> List[AbstractModel]:
         models = []

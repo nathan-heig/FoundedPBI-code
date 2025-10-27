@@ -178,6 +178,11 @@ if __name__ == "__main__":
     cli_args = parser.parse_args()
     config = parse_config(cli_args.config)
 
+    # Set number of threads for PyTorch
+    if config.torch_num_threads > 0:
+        logger.debug(f"Setting PyTorch number of threads to {config.torch_num_threads}")
+        torch.set_num_threads(config.torch_num_threads)
+
     # Load input data
     if config.input_perphect is not None:
         bacteria_df, phages_df, couples_df = PerphectDataInput(input_paths=config.input_perphect).load()

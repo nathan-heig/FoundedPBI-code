@@ -208,3 +208,7 @@ __marimo__/
 
 data/
 *.out
+
+tmp/
+.progress
+.progress.lock
