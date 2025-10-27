@@ -6,15 +6,13 @@ from pbi_models.classifiers.abstract_classifier import AbstractClassifier
 
 logger = Logging()
 
-class BasicClassifier(AbstractClassifier):
-    def __init__(self, bacterium_embed_dim: int, phage_embed_dim: int, hidden_dim: int = 256):
+class LinearClassifier(AbstractClassifier):
+    def __init__(self, bacterium_embed_dim: int, phage_embed_dim: int):
         super().__init__(bacterium_embed_dim, phage_embed_dim)
 
-        self.hidden_dim = hidden_dim
-
-        self.fc1 = nn.Linear(bacterium_embed_dim + phage_embed_dim, hidden_dim)
-        self.bn1 = nn.BatchNorm1d(hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, 2)
+        self.linear = nn.Linear(bacterium_embed_dim + phage_embed_dim, 2)
+        self.softmax = nn.Softmax(dim=1)
+        
 
     def forward(self, bacterium_emb: torch.Tensor, phage_emb: torch.Tensor):
         """
@@ -25,12 +23,7 @@ class BasicClassifier(AbstractClassifier):
             logits: [batch, num_classes]
         """
         x = torch.cat([bacterium_emb, phage_emb], dim=1)  # concat along features
-        x = F.relu(self.bn1(self.fc1(x)))
-        logits = self.fc2(x)
+
+        logits = self.softmax(self.linear(x))
+
         return logits
-    
-    def name(self):
-        return f"BasicClassifier({self.hidden_dim})"
-    
-    def __repr__(self):
-        return f"BasicClassifier(hidden_dim={self.hidden_dim})"
