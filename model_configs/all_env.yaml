@@ -6,8 +6,23 @@ embeddings_dir: data/embeddings
 num_gpu: 0
 # gpu_id: 3
 use_cached_embeddings: true
-epochs: $EPOCHS
 torch_num_threads: 1
+
+training_config:
+  # do_train: true
+  epochs: 100
+  learning_rate: 1e-3
+  weight_decay: 1e-4
+  batch_size: 256
+
+  k_folds_cv: 3
+
+  patience_early_stopping: 10
+  monitor_metric_early_stopping: f1
+
+  patience_reduce_lr: 5
+  monitor_metric_reduce_lr: f1
+  multiplying_factor_reduce_lr: 0.5
 
 phages_embedding_models:
   - name: NT2
@@ -50,3 +65,6 @@ bacteria_embedding_models:
       max_seq_len: 32768
       overlap: 0
     strategy: $DNABERTBACTSTRAT
+
+classifier:
+  name: BasicClassifier

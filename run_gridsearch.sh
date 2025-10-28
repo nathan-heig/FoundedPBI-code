@@ -14,7 +14,6 @@ megadnabactstrats=("TruncateStrategy" "MaxStrategy" "Tf4idfStrategy" "TKPertStra
 dnabertphagestrats=("TruncateStrategy" "MaxStrategy" "TKPertStrategy")
 dnabertbactstrats=("TruncateStrategy" "MaxStrategy" "TKPertStrategy")
 
-epochs=30
 repeats=3
 
 mkdir -p ./tmp/gridsearch_results
@@ -33,15 +32,14 @@ run_one() {
     local megadnab="$4"
     local dnabertp="$5"
     local dnabertb="$6"
-    local epochs="$7"
-    local total="$8"
+    local total="$7"
 
     local scores=()
     
     for ((i=1;i<=repeats;i++)); do
         local LOG="./tmp/gridsearch_results/log_${nt2p}_${nt2b}_${megadnap}_${megadnab}_${dnabertp}_${dnabertb}_run${i}.txt"
         
-        python main.py -c model_configs/all_env.yaml >"$LOG" 2>/dev/null
+        NT2PHAGESTRAT=$nt2p MEGADNAPHAGESTRAT=$megadnap DNABERTPHAGESTRAT=$dnabertp NT2BACTSTRAT=$nt2b MEGADNABACTSTRAT=$megadnab DNABERTBACTSTRAT=$dnabertb python main.py -c model_configs/all_env.yaml &>"$LOG" # 2>/dev/null
         
         local SCORE
         SCORE=$(tail -n 6 "$LOG" | grep -F "F1 score (test): " | awk '{print $NF}')
@@ -98,10 +96,10 @@ for nt2p in "${nt2phagestrats[@]}"; do
       for megadnab in "${megadnabactstrats[@]}"; do
         for dnabertp in "${dnabertphagestrats[@]}"; do
           for dnabertb in "${dnabertbactstrats[@]}"; do
-            echo "$nt2p $nt2b $megadnap $megadnab $dnabertp $dnabertb $epochs $total"
+            echo "$nt2p $nt2b $megadnap $megadnab $dnabertp $dnabertb $total"
           done
         done
       done
     done
   done
-done | stdbuf -oL xargs -n 8 -P 100 bash -c 'run_one "$@"' _
+done | stdbuf -oL xargs -n 7 -P 100 bash -c 'run_one "$@"' _
