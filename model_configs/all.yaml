@@ -8,8 +8,23 @@ embeddings_dir: data/embeddings
 num_gpu: 1
 gpu_id: 1
 use_cached_embeddings: true
-epochs: 50
 # torch_num_threads: 1
+
+training_config:
+  # do_train: true
+  epochs: 100
+  learning_rate: 1e-3
+  weight_decay: 1e-4
+  batch_size: 256
+
+  k_folds_cv: 3
+
+  patience_early_stopping: 10
+  monitor_metric_early_stopping: f1
+
+  patience_reduce_lr: 5
+  monitor_metric_reduce_lr: f1
+  multiplying_factor_reduce_lr: 0.5
 
 phages_embedding_models:
   - name: NT2
@@ -83,8 +98,8 @@ bacteria_embedding_models:
 #     dense_dim: 100
 #     dense_dropout: 0.5
 
-classifier:
-  name: LinearClassifier
-
 # classifier:
-#   name: BasicClassifier
+#   name: LinearClassifier
+
+classifier:
+  name: BasicClassifier

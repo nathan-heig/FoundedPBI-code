@@ -1,14 +1,14 @@
+from collections import OrderedDict
 import sys
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from pbi_utils.config_parser import parse_config
+from pbi_utils.config_parser import TrainingConfig, parse_config
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
 from pbi_utils.logging import Logging, INFO, DEBUG
-from pbi_models.classifiers.abstract_classifier import AbstractClassifier
 from pbi_models.embedders.abstract_model import AbstractModel
-from typing import Tuple, List
-from sklearn.model_selection import train_test_split
+from typing import Literal, Tuple, List
+from sklearn.model_selection import KFold, train_test_split
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
@@ -81,11 +81,18 @@ def dataframe_to_tf_dataloader(df: pd.DataFrame, batch_size: int, device: str):
 
     return dataloader
 
-def train_model(train_df: pd.DataFrame, model: nn.Module, batch_size: int, learning_rate: float, epochs: int, device: str, use_multiple_gpu: bool = True) -> np.ndarray:
-    dataloader = dataframe_to_tf_dataloader(train_df, batch_size=batch_size, device=device)
+def train_model(train_df: pd.DataFrame, model: nn.Module, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
+    dataloader = dataframe_to_tf_dataloader(train_df, batch_size=training_config.batch_size, device=device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=training_config.learning_rate, weight_decay=training_config.weight_decay)
     criterion = nn.CrossEntropyLoss()
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer,
+    mode="min" if training_config.monitor_metric_reduce_lr == "loss" else "max", # 'max' for F1/accuracy, 'min' for loss
+    factor=training_config.multiplying_factor_reduce_lr,
+    patience=training_config.patience_reduce_lr,
+)
 
     # metrics
     accuracy = tm.Accuracy(task="binary").to(device)
@@ -98,14 +105,20 @@ def train_model(train_df: pd.DataFrame, model: nn.Module, batch_size: int, learn
     
     model.to(device)
 
-    logger.info(f"Starting training for {epochs} epochs...")
-    # Typical torch training loop
-    for i in range(epochs):
-        with tqdm(dataloader, unit="batch", mininterval=0) as tepoch:
-            train_loss = 0.0
-            for bact_emb, phg_emb, labels in tepoch:   # each [batch, emb_dim]
-                tepoch.set_description(f"Epoch: {i+1}")
+    if verbose >= 2:
+        logger.info(f"Starting training for {training_config.epochs} epochs...")
 
+    # Early stopping
+    best_metric = -np.inf if training_config.monitor_metric_early_stopping != "loss" else np.inf
+    epochs_no_improve = 0
+    best_model_state = None
+    
+    # Typical torch training loop
+    with tqdm(range(training_config.epochs), unit="epoch", desc=progressbar_description, disable=verbose<1) as tepochs:
+        for epoch in tepochs:
+            # Train 1 epoch
+            train_loss = 0.0
+            for bact_emb, phg_emb, labels in dataloader:   # each [batch, emb_dim]
                 optimizer.zero_grad()
                 logits = model(bact_emb, phg_emb)
                 loss = criterion(logits, labels)
@@ -115,58 +128,170 @@ def train_model(train_df: pd.DataFrame, model: nn.Module, batch_size: int, learn
 
                 predictions = logits.argmax(dim=1, keepdim=True).squeeze()
                 acc = accuracy(predictions, labels)
-                f1(predictions, labels)
+                f1s = f1(predictions, labels)
                 rec = recall(predictions, labels)
                 cm(predictions, labels)
 
-                tepoch.set_postfix(loss=loss.item(), accuracy=100. * acc.item(), recall=100. * rec.item())
+            # Validation results
+            if val_df is not None:
+                val_cm, val_loss = test_model(val_df, model, training_config.batch_size, device, silent=True)
+                # Inside it calls model.eval(), so we need to set it to train mode again
+                model.train()
+
+                tp, fp, fn, tn = val_cm[0][0], val_cm[0][1], val_cm[1][0], val_cm[1][1]
+                val_f1 = (2*tp)/(2*tp+fp+fn)
+                val_acc = (tp+tn)/(tp+tn+fp+fn)
+                val_rec = tp/(tp+fn)
+
+                # Early stopping
+                if training_config.monitor_metric_early_stopping == "f1":
+                    current_metric = val_f1
+                    improved = current_metric > best_metric
+                elif training_config.monitor_metric_early_stopping == "loss":
+                    current_metric = val_loss
+                    improved = current_metric < best_metric
+                else:
+                    raise ValueError(f"Unknown metric {training_config.monitor_metric_early_stopping}. monitor_metric_early_stopping must be 'f1' or 'loss'")
+
+                if improved:
+                    best_metric = current_metric
+                    epochs_no_improve = 0
+                    best_model_state = model.state_dict()
+                else:
+                    epochs_no_improve += 1
+
+                if epochs_no_improve >= training_config.patience_early_stopping:
+                    if verbose >= 1:
+                        logger.debug(f"Early stopping triggered after {epoch+1} epochs")
+                    break
+
+                # Learning rate scheduler
+                scheduler.step(val_f1)
+
+                tepochs.set_postfix(OrderedDict(lr=optimizer.param_groups[0]['lr'], loss=val_loss, accuracy=100. * val_acc, recall=100. * val_rec, f1=100. * val_f1))
+            else:
+                tepochs.set_postfix(OrderedDict(loss=loss.item(), accuracy=100. * acc.item(), recall=100. * rec.item(), f1=100. * f1s.item()))
     
-    logger.info(f"Finished training")
-    logger.info(f'Accuracy (train): {accuracy.compute()}')
-    logger.info(f'Recall (train): {recall.compute()}')
-    logger.info(f'F1 score (train): {f1.compute()}')
-    logger.info(f"Loss (train): {loss}")
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
+
     cm_mat = cm.compute().cpu().numpy()[::-1, ::-1].T # Transpose anti diagonal (torchmetrics default: TN, FP, FN, TP)
-    logger.info(f"Confusion Matrix (train) (TP, FP, FN, TN): {cm_mat[0][0], cm_mat[0][1], cm_mat[1][0], cm_mat[1][1]}")
+    
+    if verbose >= 2:
+        logger.info(f"Finished training")
+        logger.info(f'Accuracy (train): {accuracy.compute()}')
+        logger.info(f'Recall (train): {recall.compute()}')
+        logger.info(f'F1 score (train): {f1.compute()}')
+        logger.info(f"Loss (train): {loss}")
+        logger.info(f"Confusion Matrix (train) (TP, FP, FN, TN): {cm_mat[0][0], cm_mat[0][1], cm_mat[1][0], cm_mat[1][1]}")
 
     return cm_mat
 
-def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device: str) -> np.ndarray:
-    logger.info(f"Starting testing...")
+def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device: str, silent: bool = False) -> tuple[np.ndarray, float]:
+    if not silent:
+        logger.info(f"Starting testing...")
     dataloader = dataframe_to_tf_dataloader(test_df, batch_size, device)
 
     test_loss = 0.0
-    correct, total = 0,0
     criterion = nn.CrossEntropyLoss()
 
     # metrics
-    accuracy = tm.Accuracy(task="binary").to(device)
-    recall = tm.Recall(task="binary").to(device)
-    f1 = tm.F1Score(task="binary").to(device)
+    if not silent:
+        accuracy = tm.Accuracy(task="binary").to(device)
+        recall = tm.Recall(task="binary").to(device)
+        f1 = tm.F1Score(task="binary").to(device)
     cm = tm.ConfusionMatrix(task="binary").to(device)
 
-    for bact_emb, phg_emb, labels in dataloader:
-        logits = model(bact_emb, phg_emb)
+    model.eval()
+    with torch.no_grad():
+        for bact_emb, phg_emb, labels in dataloader:
+            logits = model(bact_emb, phg_emb)
+            loss = criterion(logits,labels)
+            test_loss += loss.item() * bact_emb.size(0)
 
-        predictions = logits.argmax(dim=1, keepdim=True).squeeze()
-        correct += (predictions == labels).sum().item()
-        total += predictions.size(0)
-        loss = criterion(logits,labels)
-        test_loss += loss.item() * bact_emb.size(0)
+            predictions = logits.argmax(dim=1, keepdim=True).squeeze()
 
-        accuracy(predictions, labels)
-        f1(predictions, labels)
-        recall(predictions, labels)
-        cm(predictions, labels)
+            if not silent:
+                accuracy(predictions, labels)
+                f1(predictions, labels)
+                recall(predictions, labels)
+            cm(predictions, labels)
 
-    logger.info(f'Accuracy (test): {accuracy.compute()}')
-    logger.info(f'Recall (test): {recall.compute()}')
-    logger.info(f'F1 score (test): {f1.compute()}')
-    logger.info(f'Loss (test): {test_loss/len(dataloader.dataset)}') # type: ignore
     cm_mat = cm.compute().cpu().numpy()[::-1, ::-1].T # Transpose anti diagonal (torchmetrics default: TN, FP, FN, TP)
-    logger.info(f"Confusion Matrix (test) (TP, FP, FN, TN): {cm_mat[0][0], cm_mat[0][1], cm_mat[1][0], cm_mat[1][1]}")
+    test_loss = test_loss/len(dataloader.dataset) # type: ignore
+    
+    if not silent:
+        logger.info(f'Accuracy (test): {accuracy.compute()}')
+        logger.info(f'Recall (test): {recall.compute()}')
+        logger.info(f'F1 score (test): {f1.compute()}')
+        logger.info(f'Loss (test): {test_loss}')
+        logger.info(f"Confusion Matrix (test) (TP, FP, FN, TN): {cm_mat[0][0], cm_mat[0][1], cm_mat[1][0], cm_mat[1][1]}")
 
-    return cm_mat
+    return cm_mat, test_loss
+
+def kfold_train(df: pd.DataFrame, model: nn.Module, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True):
+    """
+    Train model and test using K-Fold cross validation
+    """
+
+    def reset_weights(model: nn.Module):
+        """
+        Recursively reset the weights of a PyTorch model in-place.
+        Works for nested submodules, Sequential, and custom modules.
+        Coauthored by ChatGPT
+        """
+        for child in model.children():
+            # If the layer has reset_parameters, call it
+            if hasattr(child, 'reset_parameters'):
+                child.reset_parameters()
+            else:
+                # Recursively reset nested children
+                reset_weights(child)
+
+    kfold = KFold(n_splits=training_config.k_folds_cv, shuffle=True, random_state=42)
+    all_conf_matrices = []
+
+    logger.info(f"Starting {training_config.k_folds_cv}-Fold Cross Validation...")
+
+    for fold, (train_idx, val_idx) in enumerate(kfold.split(df)):
+        train_df = df.iloc[train_idx].reset_index(drop=True)
+        val_df = df.iloc[val_idx].reset_index(drop=True)
+
+        # Reset model for each fold
+        reset_weights(model)
+        model.to(device)
+
+        train_model(
+            train_df=train_df,
+            model=model,
+            training_config = training_config,
+            device=device,
+            use_multiple_gpu=use_multiple_gpu,
+            val_df=val_df,
+            verbose=1,
+            progressbar_description=f"Fold {fold + 1}/{training_config.k_folds_cv}"
+        )
+
+        # Evaluate model on validation fold
+        cm_mat, _ = test_model(
+            test_df=val_df,
+            model=model,
+            batch_size=training_config.batch_size,
+            device=device,
+            silent=True
+        )
+
+        all_conf_matrices.append(cm_mat)
+
+    mean_cm: np.ndarray = sum(all_conf_matrices) / len(all_conf_matrices) # type: ignore
+    tp, fp, fn, tn = mean_cm[0][0], mean_cm[0][1], mean_cm[1][0], mean_cm[1][1]
+    logger.info(f"Finished Cross Validation training")
+    logger.info(f'Accuracy (CV): {(tp+tn)/(tp+tn+fp+fn)}')
+    logger.info(f'Recall (CV): {tp/(tp+fn)}')
+    logger.info(f'F1 score (CV): {(2*tp)/(2*tp+fp+fn)}')
+    logger.info(f"Confusion Matrix (CV) (TP, FP, FN, TN): ({tp:.2f}, {fp:.2f}, {fn:.2f}, {tn:.2f})")
+
+    return mean_cm
 
 if __name__ == "__main__":
     
@@ -174,9 +299,12 @@ if __name__ == "__main__":
 
     # Parse command line args
     parser = argparse.ArgumentParser(description="PBI Pipeline CLI")
-    parser.add_argument("--config", "-c", required=True, help="Path to YAML config file")
+    parser.add_argument("--config", "-c", required=False, default=None, type=str, help="Path to YAML config file")
+    parser.add_argument("--json-cli", "-j", required=False, default=None, type=str, help="Alternative way to set config. Recieves the entire json as a parameter.")
     cli_args = parser.parse_args()
-    config = parse_config(cli_args.config)
+    assert cli_args.config is not None or cli_args.json_cli is not None, "A configuration is required. Use --help to see the details."
+
+    config = parse_config(cli_args.config, json_cli=cli_args.json_cli)
 
     # Set number of threads for PyTorch
     if config.torch_num_threads > 0:
@@ -198,7 +326,7 @@ if __name__ == "__main__":
         create_embeddings(config.bacteria_embedding_models, config.phages_embedding_models, bacteria_df, phages_df, output_manager, overwrite=True)
 
     # Create datasets, train and test classifier
-    if not config.no_train:
+    if config.training_config.do_train:
         # Create train and test datasets
         bacteria_model_names = [x.name() for x in config.bacteria_embedding_models]
         phages_model_names = [x.name() for x in config.phages_embedding_models]
@@ -216,16 +344,17 @@ if __name__ == "__main__":
         stats.update_classifier(model)
 
         t = time.perf_counter()
-        cm = train_model(train, model, batch_size=config.batch_size, learning_rate=config.learning_rate, epochs=config.epochs, device=device, use_multiple_gpu=False)
+        # cm = train_model(train, model, batch_size=config.batch_size, learning_rate=config.learning_rate, epochs=config.epochs, device=device, use_multiple_gpu=False)
+        cm = kfold_train(train, model, training_config=config.training_config, device=device, use_multiple_gpu=False)
         train_time = time.perf_counter() - t
 
         stats.update_train_results(cm, train_time)
 
-        t = time.perf_counter()
-        cm = test_model(test, model, batch_size=config.batch_size, device=device)
-        test_time = time.perf_counter() - t
+        # t = time.perf_counter()
+        # cm, _ = test_model(test, model, batch_size=config.batch_size, device=device)
+        # test_time = time.perf_counter() - t
 
-        stats.update_test_results(cm, test_time)
+        # stats.update_test_results(cm, test_time)
 
         stats.log(logger.info)
 
