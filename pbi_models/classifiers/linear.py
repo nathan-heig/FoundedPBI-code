@@ -10,7 +10,6 @@ class LinearClassifier(AbstractClassifier):
         super().__init__(bacterium_embed_dim, phage_embed_dim)
 
         self.linear = nn.Linear(bacterium_embed_dim + phage_embed_dim, 2)
-        self.softmax = nn.Softmax(dim=1)
         
 
     def forward(self, bacterium_emb: torch.Tensor, phage_emb: torch.Tensor):
@@ -23,6 +22,6 @@ class LinearClassifier(AbstractClassifier):
         """
         x = torch.cat([bacterium_emb, phage_emb], dim=1)  # concat along features
 
-        logits = self.softmax(self.linear(x))
+        x = self.linear(x)
 
-        return logits
+        return x

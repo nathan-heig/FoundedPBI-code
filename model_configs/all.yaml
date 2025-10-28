@@ -9,14 +9,15 @@ num_gpu: 1
 gpu_id: 1
 use_cached_embeddings: true
 epochs: 50
+# torch_num_threads: 1
 
 phages_embedding_models:
   - name: NT2
     params: 
       model_name: nucleotide-transformer-v2-50m-multi-species
       overlap: 0
-    # strategy: MaxStrategy
-    strategy: TKPertStrategy
+    strategy: TruncateStrategy
+    # strategy: TKPertStrategy
     # strategy:
     #   name: TKPertStrategy
     #   params:
@@ -27,8 +28,8 @@ phages_embedding_models:
       weights_path: data/weights/megaDNA_phage_145M.pt
       get_layer: avg
       overlap: 0
-    strategy: Tf4idfStrategy
-    # strategy: TruncateStrategy
+    strategy: TruncateStrategy
+    # strategy: Tf4idfStrategy
     # strategy:
     #   name: TKPertStrategy
     #   params:
@@ -39,16 +40,16 @@ phages_embedding_models:
       source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
       max_seq_len: 32768
       overlap: 0
-    strategy: MaxStrategy
-    # strategy: TruncateStrategy
+    strategy: TruncateStrategy
+    # strategy: MaxStrategy
 
 bacteria_embedding_models:
   - name: NT2
     params: 
       model_name: nucleotide-transformer-v2-50m-multi-species
       overlap: 0
-    # strategy: TruncateStrategy
-    strategy: MaxStrategy
+    strategy: TruncateStrategy
+    # strategy: MaxStrategy
     # strategy:
     #   name: TKPertStrategy
     #   params:
@@ -59,8 +60,8 @@ bacteria_embedding_models:
       weights_path: data/weights/megaDNA_phage_145M.pt
       get_layer: avg
       overlap: 0
-    # strategy: TKPertStrategy
     strategy: TruncateStrategy
+    # strategy: TKPertStrategy
     # strategy:
     #   name: TKPertStrategy
     #   params:
@@ -71,8 +72,19 @@ bacteria_embedding_models:
       source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
       max_seq_len: 32768
       overlap: 0
-    strategy: TKPertStrategy
-    # strategy: TruncateStrategy
+    strategy: TruncateStrategy
+    # strategy: TKPertStrategy
 
-classifier: 
+# classifier: 
+#   name: CNNClassifier
+#   params:
+#     bacterium_conv_params: "[(64, 3, 5), (32, 10, 5), (32, 10, 5)]"
+#     phage_conv_params: "[(64, 3, 5), (32, 10, 5)]"
+#     dense_dim: 100
+#     dense_dropout: 0.5
+
+classifier:
   name: LinearClassifier
+
+# classifier:
+#   name: BasicClassifier

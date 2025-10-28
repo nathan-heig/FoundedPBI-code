@@ -7,6 +7,11 @@ from abc import ABC, abstractmethod
 logger = Logging()
 
 class AbstractClassifier(nn.Module, ABC):
+    """
+    Abstract base class for classifiers.
+    
+    **Note:** By default, the CrossEntropyLoss already applies Softmax internally, so the model must output raw logits (directly from the last layer). If not, it can cause instabilities and can cause numerical issues.
+    """
 
     @abstractmethod
     def __init__(self, bacterium_embed_dim: int, phage_embed_dim: int):
