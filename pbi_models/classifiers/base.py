@@ -2,11 +2,11 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from pbi_utils.logging import Logging
-from pbi_models.classifiers.abstract_classifier import AbstractClassifier
+from pbi_models.classifiers.abstract_classifier import AbstractNNClassifier
 
 logger = Logging()
 
-class BasicClassifier(AbstractClassifier):
+class BasicClassifier(AbstractNNClassifier):
     def __init__(self, bacterium_embed_dim: int, phage_embed_dim: int, hidden_dim: int = 256):
         super().__init__(bacterium_embed_dim, phage_embed_dim)
 

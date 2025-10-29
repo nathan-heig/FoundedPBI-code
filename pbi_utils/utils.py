@@ -16,7 +16,7 @@ def clean_gpu():
 class Stats:
     def __init__(self, args) -> None:
         self.args = args
-        self.test_cm = None
+        self.test_cm = None # CM always in the form (TN, FP, FN, TP)
         self.train_cm = None
         self.classifier = None
         self.train_time = None
@@ -51,17 +51,17 @@ class Stats:
             f"{self.args.training_config.batch_size}",
             f"{self.args.training_config.learning_rate:.4e}".replace(".",","),
             f"{self.train_time:.2f}".replace(".",",") if self.train_time is not None else "",
-            f"{self.train_cm[0][0]:.2f}".replace(".",",") if self.train_cm is not None else "",
+            f"{self.train_cm[1][1]:.2f}".replace(".",",") if self.train_cm is not None else "",
             f"{self.train_cm[0][1]:.2f}".replace(".",",") if self.train_cm is not None else "",
             f"{self.train_cm[1][0]:.2f}".replace(".",",") if self.train_cm is not None else "",
-            f"{self.train_cm[1][1]:.2f}".replace(".",",") if self.train_cm is not None else "",
+            f"{self.train_cm[0][0]:.2f}".replace(".",",") if self.train_cm is not None else "",
             "",
             "",
             "",
             f"{self.test_time:.2f}".replace(".",",") if self.test_time is not None else "",
-            f"{self.test_cm[0][0]:.2f}".replace(".",",") if self.test_cm is not None else "",
+            f"{self.test_cm[1][1]:.2f}".replace(".",",") if self.test_cm is not None else "",
             f"{self.test_cm[0][1]:.2f}".replace(".",",") if self.test_cm is not None else "",
             f"{self.test_cm[1][0]:.2f}".replace(".",",") if self.test_cm is not None else "",
-            f"{self.test_cm[1][1]:.2f}".replace(".",",") if self.test_cm is not None else "",
+            f"{self.test_cm[0][0]:.2f}".replace(".",",") if self.test_cm is not None else "",
         ]
         logger("\n"+"\t".join(data))

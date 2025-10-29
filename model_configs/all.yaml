@@ -101,5 +101,12 @@ bacteria_embedding_models:
 # classifier:
 #   name: LinearClassifier
 
+# classifier:
+#   name: BasicClassifier
+
 classifier:
-  name: BasicClassifier
+  name: SklearnClassifier
+  params:
+    sklearn_model_name: RandomForestClassifier
+    sklearn_model_params:
+      n_estimators: 100

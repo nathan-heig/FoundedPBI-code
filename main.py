@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from pbi_models.classifiers.sklearn_classifier import SklearnClassifier
 from pbi_utils.config_parser import TrainingConfig, parse_config
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
 from pbi_utils.logging import Logging, INFO, DEBUG
@@ -17,6 +18,7 @@ import argparse
 import time
 from pbi_utils.utils import Stats
 from pbi_utils.embeddings_merging_strategies import *
+from sklearn.metrics import confusion_matrix
 
 tqdm.pandas() # Initialize tqdm with pandas
 Logging.set_logging_level(DEBUG)
@@ -81,7 +83,63 @@ def dataframe_to_tf_dataloader(df: pd.DataFrame, batch_size: int, device: str):
 
     return dataloader
 
-def train_model(train_df: pd.DataFrame, model: nn.Module, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
+def compute_metrics(tn: float, fp: float, fn: float, tp: float) -> Tuple[float, float, float]:
+    """Compute Accuracy, Recall and F1Score from the confusion matrix"""
+    acc = (tp+tn)/(tp+tn+fp+fn)
+    rec = tp/(tp+fn)
+    f1 = (2*tp)/(2*tp+fp+fn)
+
+    return acc, rec, f1
+
+def dataframe_to_numpy_X_y(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
+    y = df["interaction_type"]
+    X = df[["bacterium_embedding", "phage_embedding"]]
+
+    X = X.apply(lambda x: np.concatenate([x["bacterium_embedding"].cpu().numpy(), x["phage_embedding"].cpu().numpy()], axis=None), axis=1, result_type="expand")
+    return X, y
+
+def train_model(train_df: pd.DataFrame, model: nn.Module | SklearnClassifier, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
+    """Allow torch models and scikit-learn models"""
+    
+    if isinstance(model, nn.Module):
+        return train_nn_model(train_df, model, training_config, device, use_multiple_gpu, val_df, verbose, progressbar_description)
+    
+    else:
+        return train_sklearn_model(train_df, model, training_config, device, use_multiple_gpu, val_df, verbose, progressbar_description)
+
+def train_sklearn_model(train_df: pd.DataFrame, model: SklearnClassifier, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
+    if verbose >= 2:
+        logger.info(f"Starting training for {training_config.epochs} epochs...")
+
+    X_train, y_train = dataframe_to_numpy_X_y(train_df)
+
+    model.fit(X_train, y_train)
+
+    if val_df is not None:
+        X_val, y_val = dataframe_to_numpy_X_y(val_df)
+
+        y_pred = model.predict(X_val)
+
+    else:
+        y_val = y_train
+        y_pred = model.predict(X_train)
+
+    cm = confusion_matrix(y_val, y_pred)
+
+    tn, fp, fn, tp = cm.ravel().tolist()
+
+    acc, rec, f1 = compute_metrics(tn, fp, fn, tp)
+
+    if verbose >= 2:
+        logger.info(f"Finished training")
+        logger.info(f'Accuracy (train): {acc}')
+        logger.info(f'Recall (train): {rec}')
+        logger.info(f'F1 score (train): {f1}')
+        logger.info(f"Confusion Matrix (train) (TP, FP, FN, TN): {tp, fp, fn, tn}")
+
+    return cm
+
+def train_nn_model(train_df: pd.DataFrame, model: nn.Module, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
     dataloader = dataframe_to_tf_dataloader(train_df, batch_size=training_config.batch_size, device=device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=training_config.learning_rate, weight_decay=training_config.weight_decay)
@@ -138,10 +196,8 @@ def train_model(train_df: pd.DataFrame, model: nn.Module, training_config: Train
                 # Inside it calls model.eval(), so we need to set it to train mode again
                 model.train()
 
-                tp, fp, fn, tn = val_cm[0][0], val_cm[0][1], val_cm[1][0], val_cm[1][1]
-                val_f1 = (2*tp)/(2*tp+fp+fn)
-                val_acc = (tp+tn)/(tp+tn+fp+fn)
-                val_rec = tp/(tp+fn)
+                tn, fp, fn, tp = val_cm.ravel().tolist()
+                val_acc, val_rec, val_f1 = compute_metrics(tn, fp, fn, tp)
 
                 # Early stopping
                 if training_config.monitor_metric_early_stopping == "f1":
@@ -175,19 +231,49 @@ def train_model(train_df: pd.DataFrame, model: nn.Module, training_config: Train
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
 
-    cm_mat = cm.compute().cpu().numpy()[::-1, ::-1].T # Transpose anti diagonal (torchmetrics default: TN, FP, FN, TP)
-    
+    cm_mat = cm.compute().cpu().numpy() # (torchmetrics default: TN, FP, FN, TP)
+    tn, fp, fn, tp = cm_mat.ravel().tolist()
+
     if verbose >= 2:
         logger.info(f"Finished training")
         logger.info(f'Accuracy (train): {accuracy.compute()}')
         logger.info(f'Recall (train): {recall.compute()}')
         logger.info(f'F1 score (train): {f1.compute()}')
         logger.info(f"Loss (train): {loss}")
-        logger.info(f"Confusion Matrix (train) (TP, FP, FN, TN): {cm_mat[0][0], cm_mat[0][1], cm_mat[1][0], cm_mat[1][1]}")
+        logger.info(f"Confusion Matrix (train) (TP, FP, FN, TN): {tp, fp, fn, tn}")
 
     return cm_mat
 
-def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device: str, silent: bool = False) -> tuple[np.ndarray, float]:
+def test_model(test_df: pd.DataFrame, model: nn.Module | SklearnClassifier, batch_size: int, device: str, silent: bool = False) -> tuple[np.ndarray, float]:
+    """Allow torch and scikit-learn models"""
+
+    if isinstance(model, nn.Module):
+        return test_nn_model(test_df, model, batch_size, device, silent)
+    
+    else:
+        return test_sklearn_model(test_df, model, batch_size, device, silent)
+
+def test_sklearn_model(test_df: pd.DataFrame, model: SklearnClassifier, batch_size: int, device: str, silent: bool = False) -> tuple[np.ndarray, float]:
+    if not silent:
+        logger.info(f"Starting testing...")
+    
+    X_test, y_test = dataframe_to_numpy_X_y(test_df)
+
+    y_pred = model.predict(X_test)
+
+    cm = confusion_matrix(y_test, y_pred)
+    tn, fp, fn, tp = cm.ravel().tolist()
+    acc, rec, f1 = compute_metrics(tn, fp, fn, tp)
+
+    if not silent:
+        logger.info(f'Accuracy (test): {acc}')
+        logger.info(f'Recall (test): {rec}')
+        logger.info(f'F1 score (test): {f1}')
+        logger.info(f"Confusion Matrix (test) (TP, FP, FN, TN): {tp, fp, fn, tn}")
+
+    return cm, -1
+
+def test_nn_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device: str, silent: bool = False) -> tuple[np.ndarray, float]:
     if not silent:
         logger.info(f"Starting testing...")
     dataloader = dataframe_to_tf_dataloader(test_df, batch_size, device)
@@ -217,36 +303,24 @@ def test_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device:
                 recall(predictions, labels)
             cm(predictions, labels)
 
-    cm_mat = cm.compute().cpu().numpy()[::-1, ::-1].T # Transpose anti diagonal (torchmetrics default: TN, FP, FN, TP)
+    cm_mat = cm.compute().cpu().numpy() # (torchmetrics default: TN, FP, FN, TP)
     test_loss = test_loss/len(dataloader.dataset) # type: ignore
+
+    tn, fp, fn, tp = cm_mat.ravel().tolist()
     
     if not silent:
         logger.info(f'Accuracy (test): {accuracy.compute()}')
         logger.info(f'Recall (test): {recall.compute()}')
         logger.info(f'F1 score (test): {f1.compute()}')
         logger.info(f'Loss (test): {test_loss}')
-        logger.info(f"Confusion Matrix (test) (TP, FP, FN, TN): {cm_mat[0][0], cm_mat[0][1], cm_mat[1][0], cm_mat[1][1]}")
+        logger.info(f"Confusion Matrix (test) (TP, FP, FN, TN): {tp, fp, fn, tn}")
 
     return cm_mat, test_loss
 
-def kfold_train(df: pd.DataFrame, model: nn.Module, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True):
+def kfold_train(df: pd.DataFrame, model: nn.Module | SklearnClassifier, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True):
     """
     Train model and test using K-Fold cross validation
     """
-
-    def reset_weights(model: nn.Module):
-        """
-        Recursively reset the weights of a PyTorch model in-place.
-        Works for nested submodules, Sequential, and custom modules.
-        Coauthored by ChatGPT
-        """
-        for child in model.children():
-            # If the layer has reset_parameters, call it
-            if hasattr(child, 'reset_parameters'):
-                child.reset_parameters()
-            else:
-                # Recursively reset nested children
-                reset_weights(child)
 
     kfold = KFold(n_splits=training_config.k_folds_cv, shuffle=True, random_state=42)
     all_conf_matrices = []
@@ -254,12 +328,11 @@ def kfold_train(df: pd.DataFrame, model: nn.Module, training_config: TrainingCon
     logger.info(f"Starting {training_config.k_folds_cv}-Fold Cross Validation...")
 
     for fold, (train_idx, val_idx) in enumerate(kfold.split(df)):
+        logger.debug(f"Starting fold {fold + 1}...")
         train_df = df.iloc[train_idx].reset_index(drop=True)
         val_df = df.iloc[val_idx].reset_index(drop=True)
 
-        # Reset model for each fold
-        reset_weights(model)
-        model.to(device)
+        model.reset_model(device)
 
         train_model(
             train_df=train_df,
@@ -284,11 +357,14 @@ def kfold_train(df: pd.DataFrame, model: nn.Module, training_config: TrainingCon
         all_conf_matrices.append(cm_mat)
 
     mean_cm: np.ndarray = sum(all_conf_matrices) / len(all_conf_matrices) # type: ignore
-    tp, fp, fn, tn = mean_cm[0][0], mean_cm[0][1], mean_cm[1][0], mean_cm[1][1]
+    # tp, fp, fn, tn = mean_cm[0][0], mean_cm[0][1], mean_cm[1][0], mean_cm[1][1]
+    tn, fp, fn, tp = mean_cm.ravel().tolist()
+    acc, rec, f1 = compute_metrics(tn, fp, fn, tp)
+
     logger.info(f"Finished Cross Validation training")
-    logger.info(f'Accuracy (CV): {(tp+tn)/(tp+tn+fp+fn)}')
-    logger.info(f'Recall (CV): {tp/(tp+fn)}')
-    logger.info(f'F1 score (CV): {(2*tp)/(2*tp+fp+fn)}')
+    logger.info(f'Accuracy (CV): {acc}')
+    logger.info(f'Recall (CV): {rec}')
+    logger.info(f'F1 score (CV): {f1}')
     logger.info(f"Confusion Matrix (CV) (TP, FP, FN, TN): ({tp:.2f}, {fp:.2f}, {fn:.2f}, {tn:.2f})")
 
     return mean_cm

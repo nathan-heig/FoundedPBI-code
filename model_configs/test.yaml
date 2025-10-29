@@ -10,12 +10,12 @@ use_cached_embeddings: true
 
 training_config:
   # do_train: true
-  epochs: 100
+  epochs: 10
   learning_rate: 1e-3
   weight_decay: 1e-4
   batch_size: 256
 
-  k_folds_cv: 3
+  k_folds_cv: 2
 
   patience_early_stopping: 10
   monitor_metric_early_stopping: f1
@@ -50,5 +50,12 @@ bacteria_embedding_models:
 # classifier:
 #   name: LinearClassifier
 
+# classifier:
+#   name: BasicClassifier
+
 classifier:
-  name: BasicClassifier
+  name: SklearnClassifier
+  params:
+    sklearn_model_name: RandomForestClassifier
+    sklearn_model_params:
+      n_estimators: 100

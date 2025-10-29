@@ -3,7 +3,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from pbi_utils.logging import Logging
-from pbi_models.classifiers.abstract_classifier import AbstractClassifier
+from pbi_models.classifiers.abstract_classifier import AbstractNNClassifier
 
 logger = Logging()
 
@@ -42,7 +42,7 @@ class BranchCNN(nn.Module):
     def forward(self, x):
         return self.model(x)
 
-class CNNClassifier(AbstractClassifier):
+class CNNClassifier(AbstractNNClassifier):
     """
     General CNN classifier with two branches (one for bacteria, one for phages).
     Coauthored by ChatGPT

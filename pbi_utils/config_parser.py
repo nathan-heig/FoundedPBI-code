@@ -1,17 +1,17 @@
 import yaml
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Literal
+from pbi_models.classifiers.sklearn_classifier import SklearnClassifier
 from pbi_utils.embeddings_merging_strategies import *
 from pbi_models.embedders import *
 from pbi_models.classifiers import *
-from pbi_models.classifiers.abstract_classifier import AbstractClassifier
+from pbi_models.classifiers.abstract_classifier import AbstractNNClassifier
 from pbi_models.embedders.abstract_model import AbstractModel
 from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
 from pbi_utils.logging import Logging
 import os
 
 logger = Logging()
-
 
 class StrategyConfig(BaseModel):
     name: str
@@ -79,7 +79,7 @@ class Config:
         self.device = "cpu" if self.num_gpu == 0 else f"cuda:{self.gpu_id}"
         self.phages_embedding_models = self._parse_models(yaml_config.phages_embedding_models)
         self.bacteria_embedding_models = self._parse_models(yaml_config.bacteria_embedding_models)
-        self.classifier = self._get_instance_from_string(yaml_config.classifier.name, subclass_of=AbstractClassifier) # The classifier is not instantiated yet because we need to know the embedding dimensions first, and that is only known after loading them (in main.py)
+        self.classifier = self._get_instance_from_string(yaml_config.classifier.name, subclass_of=(AbstractNNClassifier, SklearnClassifier)) # The classifier is not instantiated yet because we need to know the embedding dimensions first, and that is only known after loading them (in main.py)
         self.classifier_params = yaml_config.classifier.params
         self.torch_num_threads = yaml_config.torch_num_threads
 
@@ -100,12 +100,12 @@ class Config:
             models.append(model)
         return models
 
-    def _get_instance_from_string(self, class_name: str, subclass_of: type):
+    def _get_instance_from_string(self, class_name: str, subclass_of: type | tuple):
         if class_name in globals() and issubclass(globals()[class_name], subclass_of):
             model_class = globals()[class_name]
             return model_class
         else:
-            raise ValueError(f"Class {class_name} not found or is not a subclass of {subclass_of.__name__}.")
+            raise ValueError(f"Class {class_name} not found or is not a subclass of {(x.__name__ for x in subclass_of) if type(subclass_of) is tuple else subclass_of.__name__}.") # type: ignore
 
     def __repr__(self):
         return (f"Config(input_perphect={self.input_perphect}, embeddings_dir={self.embeddings_dir}, "

@@ -2,7 +2,7 @@ import importlib
 import inspect
 import os
 
-from pbi_models.classifiers.abstract_classifier import AbstractClassifier
+from pbi_models.classifiers.abstract_classifier import AbstractNNClassifier
 
 # Dynamically import all the strategies in this folder, so they are available when importing the package
 # It is usually not a good practice to modify the globals() or __all__, but in this case I use it so that the main file does not have to be changed each time a new model is added
@@ -19,7 +19,7 @@ for filename in os.listdir(dirname):
 
     # Inspect each module for subclasses of BaseStrategy
     for name, obj in inspect.getmembers(module, inspect.isclass):
-        if issubclass(obj, AbstractClassifier) and obj is not AbstractClassifier:
+        if issubclass(obj, AbstractNNClassifier) and obj is not AbstractNNClassifier:
             # Inject class directly into this package’s namespace
             globals()[name] = obj
             __all__.append(name) # type: ignore
