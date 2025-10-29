@@ -1,13 +1,20 @@
 from abc import ABC
 from sklearn.utils import all_estimators
 import importlib
+from lightgbm import LGBMClassifier
+from xgboost import XGBClassifier
 
 class SklearnClassifier(ABC):
     """
-    Abstract base class for classifiers based on Scikit-learn
+    Base class for classifiers based on Scikit-learn
     """
 
     def _get_sklearn_classifier(self, model_name: str) -> type:
+        # Special case for LGBM & XGB
+        if model_name == "LGBMClassifier": return LGBMClassifier
+        elif model_name == "XGBClassifier": return XGBClassifier
+
+        # Generic sklearn models
         estimators = all_estimators(type_filter='classifier')
         for name, class_ in estimators:
             if name == model_name:
@@ -16,8 +23,6 @@ class SklearnClassifier(ABC):
                 return getattr(importlib.import_module(f"sklearn.{module_name}"), class_name)
             
         raise ValueError(f"Incorrect model name ({model_name}) for SklearnClassifier.")
-
-
 
     def __init__(self, bacterium_embed_dim: int, phage_embed_dim: int, sklearn_model_name: str, sklearn_model_params: dict) -> None:
         self.sklearn_model_name = sklearn_model_name

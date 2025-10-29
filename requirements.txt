@@ -10,6 +10,8 @@ matplotlib
 seaborn
 imbalanced-learn
 pydantic
+lightgbm
+xgboost
 
 git+https://github.com/lingxusb/megaDNA@main
 
