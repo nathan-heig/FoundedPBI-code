@@ -39,10 +39,10 @@ run_one() {
     for ((i=1;i<=repeats;i++)); do
         local LOG="./tmp/gridsearch_results/log_${nt2p}_${nt2b}_${megadnap}_${megadnab}_${dnabertp}_${dnabertb}_run${i}.txt"
         
-        NT2PHAGESTRAT=$nt2p MEGADNAPHAGESTRAT=$megadnap DNABERTPHAGESTRAT=$dnabertp NT2BACTSTRAT=$nt2b MEGADNABACTSTRAT=$megadnab DNABERTBACTSTRAT=$dnabertb python main.py -c model_configs/all_env.yaml &>"$LOG" # 2>/dev/null
+        NT2PHAGESTRAT=$nt2p MEGADNAPHAGESTRAT=$megadnap DNABERTPHAGESTRAT=$dnabertp NT2BACTSTRAT=$nt2b MEGADNABACTSTRAT=$megadnab DNABERTBACTSTRAT=$dnabertb python main.py -c model_configs/all_env.yaml &>"$LOG" #2>/dev/null
         
         local SCORE
-        SCORE=$(tail -n 6 "$LOG" | grep -F "F1 score (test): " | awk '{print $NF}')
+        SCORE=$(tail -n 6 "$LOG" | grep -F "F1 score (CV): " | awk '{print $NF}')
         scores+=("$SCORE")
     done
 
@@ -102,4 +102,4 @@ for nt2p in "${nt2phagestrats[@]}"; do
       done
     done
   done
-done | stdbuf -oL xargs -n 7 -P 100 bash -c 'run_one "$@"' _
+done | stdbuf -oL xargs -n 7 -P 80 bash -c 'run_one "$@"' _
