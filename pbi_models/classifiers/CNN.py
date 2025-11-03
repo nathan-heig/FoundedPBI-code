@@ -55,9 +55,9 @@ class CNNClassifier(AbstractNNClassifier):
         # Sanity checks
         self._sanity_checks(bacterium_embed_dim, phage_embed_dim, bacterium_conv_params, phage_conv_params, dense_dim, dense_dropout)
 
+        # Convert params to dict
         if isinstance(bacterium_conv_params, str):
             bacterium_conv_params = self._parse_branch_params(bacterium_conv_params)
-
         if isinstance(phage_conv_params, str):
             phage_conv_params = self._parse_branch_params(phage_conv_params)
 
@@ -93,7 +93,6 @@ class CNNClassifier(AbstractNNClassifier):
         assert isinstance(dense_dropout, (float, str)), f"dense_dropout must be either a float or a string. Got: {type(dense_dropout)}: {dense_dropout}"
         assert isinstance(bacterium_embed_dim, int), f"bacterium_embed_dim must be an integer. Got {type(bacterium_embed_dim)}: {bacterium_embed_dim}"
         assert isinstance(phage_embed_dim, int), f"phage_embed_dim must be an integer. Got {type(phage_embed_dim)}: {phage_embed_dim}"
-
 
     def _parse_branch_params(self, params_str: str) -> list[tuple[int, int, int]]:
         """Parse branch parameters from string representation."""
@@ -141,3 +140,47 @@ class CNNClassifier(AbstractNNClassifier):
         
     def __repr__(self) -> str:
         return f"""CNNClassifier(bacterium_conv_params={self.bacterium_conv_params}, phage_conv_params={self.phage_conv_params}, dense_dim={self.fc1.out_features}, dense_dropout={self.dropout.p})"""
+    
+class BasicCNNClassifier(CNNClassifier):
+    def __init__(self, bacterium_embed_dim: int, phage_embed_dim: int, cnn_params: list[tuple[int, int, int]] | str, dense_dim: int | str = 128, dense_dropout: float | str = 0.5):
+        super().__init__(bacterium_embed_dim, phage_embed_dim, [], [], dense_dim, dense_dropout)
+
+        if isinstance(cnn_params, str):
+            self.params = self._parse_branch_params(cnn_params)
+        else:
+            self.params = cnn_params
+
+        self.cnn = BranchCNN(self.params)
+
+        self.flat_size = self._get_flatten_size(bacterium_embed_dim + phage_embed_dim, self.cnn)
+
+        # Dense layers
+        self.fc1 = nn.Linear(self.flat_size, int(dense_dim))
+        self.dropout = nn.Dropout(float(dense_dropout))
+        self.fc2 = nn.Linear(int(dense_dim), 2)
+
+        
+    def forward(self, bacterium_emb: torch.Tensor, phage_emb: torch.Tensor) -> torch.Tensor:
+        """
+        Inputs:
+            bacterium_emb: [batch, emb_dim]
+            phage_emb:     [batch, emb_dim]
+        Returns:
+            logits: [batch, num_classes]
+        """
+        # Reshape for Conv1D: [batch, channels=1, seq_len]
+        bacterium_emb = bacterium_emb.unsqueeze(1)
+        phage_emb = phage_emb.unsqueeze(1)
+
+        x = torch.cat((bacterium_emb, phage_emb), dim=2)
+
+        x = self.cnn(x)
+
+        x = torch.flatten(x, start_dim=1)
+
+        # Dense layers
+        x = F.relu(self.fc1(x))
+        x = self.dropout(x)
+        x = self.fc2(x)
+        # No softmax, return raw logits
+        return x
