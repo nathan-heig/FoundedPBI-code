@@ -1,105 +1,212 @@
 #!/usr/bin/env bash
-# Run each combination 5 times and record results + average
 
 micromamba activate -n pbi
 
-strategies=("TruncateStrategy" "AverageStrategy" "MaxStrategy" "TfidfStrategy" "Tf4idfStrategy" "TKPertStrategy")
-
-nt2phagestrats=("MaxStrategy" "TfidfStrategy" "TKPertStrategy")
-nt2bactstrats=("MaxStrategy" "TfidfStrategy" "TKPertStrategy")
-
-megadnaphagestrats=("TruncateStrategy" "MaxStrategy" "Tf4idfStrategy" "TKPertStrategy")
-megadnabactstrats=("TruncateStrategy" "MaxStrategy" "Tf4idfStrategy" "TKPertStrategy")
-
-dnabertphagestrats=("TruncateStrategy" "MaxStrategy" "TKPertStrategy")
-dnabertbactstrats=("TruncateStrategy" "MaxStrategy" "TKPertStrategy")
-
+# ===============================================
+# Settings
+# ===============================================
 repeats=3
-
+max_jobs=100
 mkdir -p ./tmp/gridsearch_results
-csv_file=./gridsearch_results.csv
-echo "NT2PhageStrategy,NT2BactStrategy,MegaDNAPhageStrategy,MegaDNABactStrategy,DNABERTPhageStrategy,DNABERTBactStrategy,F1Score1,F1Score2,F1Score3,F1Score4,F1Score5,Average" > "$csv_file"
+csv_file=./test.csv
 
-# Progress tracking
 progress_file=.progress
 lock_file=.progress.lock
 echo 0 > "$progress_file"
 
+# ===============================================
+# Parameter Grid
+# ===============================================
+declare -A param_grid=(
+  [NT2PHAGESTRAT]="MaxStrategy"
+  [NT2BACTSTRAT]="MaxStrategy"
+  [MEGADNAPHAGESTRAT]="TruncateStrategy"
+  [MEGADNABACTSTRAT]="TruncateStrategy"
+  [DNABERTPHAGESTRAT]="TruncateStrategy"
+  [DNABERTBACTSTRAT]="TruncateStrategy MaxStrategy"
+)
+
+# ===============================================
+# Generate combinations
+# ===============================================
+
+# Echo but in stderr
+errcho() { echo "$@" 1>&2; }
+
+generate_combinations() {
+    local keys=("$@")
+    local n=${#keys[@]}
+    # errcho "keys: ${keys[@]}"
+    _generate_recursive() {
+        local index=$1
+        local currcombo=${@:2}
+        # errcho "Iteration $index"
+        # errcho "Combo: ${currcombo[@]}"
+        if (( index == n )); then
+            # errcho "Finishing and printing ${currcombo[@]}"
+            printf "%s\n" "${currcombo[@]}"
+            return
+        fi
+        local key="${keys[index]}"
+        while IFS= read -r val; do
+          [[ -z "$val" ]] && continue
+          currcombo[index]="$key=$val"
+          # errcho "Creating new combo and calling next: ${currcombo[@]}"
+          _generate_recursive $((index + 1)) ${currcombo[@]}
+        done <<< "$(echo "${param_grid[$key]}" | tr ' ' '\n')"
+    }
+    _generate_recursive 0 ""
+}
+
+# ===============================================
+# Helpers
+# ===============================================
+make_label() {
+    # echo "$1" | tr '\n' '_' | tr -d '[:space:]' | tr -cd '[:alnum:]_'
+
+    local vars="$@"
+    echo "$vars" | tr ' ' '_' | tr -d '[:space:]' | tr -cd '[:alnum:]_'
+
+}
+
+is_done() {
+    local vars="$@"
+
+    # # Check logs
+    # local all_logs=true
+    # for ((i=1; i<=repeats; i++)); do
+    #     [[ -f ./tmp/gridsearch_results/log${label}_run${i}.txt ]] || { all_logs=false; break; }
+    # done
+    # $all_logs && return 0
+
+    # Check CSV (already logged results)
+    if [[ -f "$csv_file" ]]; then
+        local vars_csv
+        vars_csv=$(echo "${vars[*]}" | tr ' ' ',')
+        # errcho "Vars csv: $vars_csv"
+        if grep -qF "$vars_csv" "$csv_file"; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# ===============================================
+# Main
+# ===============================================
 run_one() {
-    local nt2p="$1"
-    local nt2b="$2"
-    local megadnap="$3"
-    local megadnab="$4"
-    local dnabertp="$5"
-    local dnabertb="$6"
-    local total="$7"
+    local total="$1"; shift
+    local decoded=$@
+
+    local vars=()
+
+    # Export env vars
+    for env in $decoded; do
+      # errcho "Env var: $env"
+      IFS='=' read -r k v <<< $env
+      # errcho "exporting $k = $v"
+      export "$k"="$v"
+      vars+=($v)
+    done
+
+    # errcho "${vars[@]}"
+
+    # while IFS='=' read -r envVar; do
+    # errcho "envVar: $envVar"
+    # IFS='=' read -r k v <<< $envVar
+    # errcho "exporting $k = $v"
+    #     export "$k"="$v"
+    # done <<< $decoded
+
+    local label
+    label=$(make_label ${vars[@]})
+
+    # Skip if done
+    if is_done ${vars[@]}; then
+        return 0
+    fi
 
     local scores=()
-    
-    for ((i=1;i<=repeats;i++)); do
-        local LOG="./tmp/gridsearch_results/log_${nt2p}_${nt2b}_${megadnap}_${megadnab}_${dnabertp}_${dnabertb}_run${i}.txt"
-        
-        NT2PHAGESTRAT=$nt2p MEGADNAPHAGESTRAT=$megadnap DNABERTPHAGESTRAT=$dnabertp NT2BACTSTRAT=$nt2b MEGADNABACTSTRAT=$megadnab DNABERTBACTSTRAT=$dnabertb python main.py -c model_configs/all_env.yaml &>"$LOG" #2>/dev/null
-        
+    for ((i=1; i<=repeats; i++)); do
+        local LOG="./tmp/gridsearch_results/log${label}_run${i}.txt"
+        echo "[$(date '+%H:%M:%S')] Running ${label} (repeat $i)..."
+        python main.py -c model_configs/all_env.yaml &>"$LOG"
         local SCORE
-        SCORE=$(tail -n 6 "$LOG" | grep -F "F1 score (CV): " | awk '{print $NF}')
+        SCORE=$(tail -n 6 "$LOG" | grep -F "F1 score (CV): " | awk '{print $NF}' || echo "NaN")
         scores+=("$SCORE")
     done
 
     # Compute average
+    local valid_scores=()
     local sum=0
-    for s in "${scores[@]}"; do sum=$(echo "$sum + $s" | bc); done
-    local avg=$(echo "scale=4; $sum / $repeats" | bc)
+    for s in "${scores[@]}"; do
+        [[ "$s" =~ ^[0-9]+(\.[0-9]+)?$ ]] || continue
+        valid_scores+=("$s")
+        sum=$(echo "$sum + $s" | bc)
+    done
+    local avg
+    if (( ${#valid_scores[@]} > 0 )); then
+        avg=$(echo "scale=4; $sum / ${#valid_scores[@]}" | bc)
+    else
+        avg="NaN"
+    fi
 
-    # File-lock-safe write
+    # Safe CSV write
     {
         flock -x 200
-        echo "${nt2p},${nt2b},${megadnap},${megadnab},${dnabertp},${dnabertb},${scores[0]},${scores[1]},${scores[2]},${scores[3]},${scores[4]},${avg}" >> "$csv_file"
+        local vars_csv
+        vars_csv=$(echo "${vars[@]}" | tr ' ' ',')
+        echo "${vars_csv},$(IFS=,; echo "${scores[*]}"),${avg}" >> "$csv_file"
     } 200>>"$csv_file"
 
-    # Update progress
+    # Progress update
     {
         flock -x 300
-        local count
-        count=$(($(<"$progress_file") + 1))
+        local count=$(( $(<"$progress_file") + 1 ))
         echo "$count" > "$progress_file"
         local percent=$((100 * count / total))
         printf "\rProgress: %d/%d (%d%%)" "$count" "$total" "$percent" >&2
     } 300>"$lock_file"
 }
 
-export -f run_one
+export -f run_one make_label is_done
 export csv_file progress_file lock_file repeats
 
-# Count total combinations
-total=$(
-for nt2p in "${nt2phagestrats[@]}"; do
-  for nt2b in "${nt2bactstrats[@]}"; do
-    for megadnap in "${megadnaphagestrats[@]}"; do
-      for megadnab in "${megadnabactstrats[@]}"; do
-        for dnabertp in "${dnabertphagestrats[@]}"; do
-          for dnabertb in "${dnabertbactstrats[@]}"; do
-            echo 1
-          done
-        done
-      done
-    done
-  done
-done | wc -l
-)
+# ===============================================
+# Generate header and combinations
+# ===============================================
+keys=("${!param_grid[@]}")
+
+generate_combinations "${keys[@]}"
+
+mapfile -t combos < <(generate_combinations "${keys[@]}")
+total=${#combos[@]}
 echo "Total combinations: $total"
 
-# Generate jobs and run in parallel
-for nt2p in "${nt2phagestrats[@]}"; do
-  for nt2b in "${nt2bactstrats[@]}"; do
-    for megadnap in "${megadnaphagestrats[@]}"; do
-      for megadnab in "${megadnabactstrats[@]}"; do
-        for dnabertp in "${dnabertphagestrats[@]}"; do
-          for dnabertb in "${dnabertbactstrats[@]}"; do
-            echo "$nt2p $nt2b $megadnap $megadnab $dnabertp $dnabertb $total"
-          done
-        done
-      done
-    done
-  done
-done | stdbuf -oL xargs -n 7 -P 80 bash -c 'run_one "$@"' _
+# Add header if CSV missing
+if [[ ! -s "$csv_file" ]]; then
+    {
+      printf "%s," "${keys[@]}"
+      for ((i=1; i<=repeats; i++)); do printf "F1Score%d," "$i"; done
+      echo "Average"
+    } > "$csv_file"
+fi
+
+# ===============================================
+# Run combinations in parallel
+# ===============================================
+
+job_count=0
+# echo "Combos: ${combos[@]}"
+for combo in "${combos[@]}"; do
+  # echo Combination: $combo
+  run_one "$total" $combo &
+  ((job_count++))
+  if (( job_count >= max_jobs )); then
+    wait -n
+    ((job_count--))
+  fi
+done
+wait
+echo
+echo "Done! Results in $csv_file"
