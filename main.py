@@ -109,7 +109,7 @@ def train_model(train_df: pd.DataFrame, model: nn.Module | SklearnClassifier, tr
 
 def train_sklearn_model(train_df: pd.DataFrame, model: SklearnClassifier, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
     if verbose >= 2:
-        logger.info(f"Starting training for {training_config.epochs} epochs...")
+        logger.info(f"Starting training...")
 
     X_train, y_train = dataframe_to_numpy_X_y(train_df)
 

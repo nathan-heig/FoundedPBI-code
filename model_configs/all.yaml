@@ -10,6 +10,7 @@ gpu_id: 1
 use_cached_embeddings: true
 # torch_num_threads: 1
 
+# Only useful when using torch classifiers
 training_config:
   # do_train: true
   epochs: 100
@@ -31,8 +32,8 @@ phages_embedding_models:
     params: 
       model_name: nucleotide-transformer-v2-50m-multi-species
       overlap: 0
-    strategy: TruncateStrategy
-    # strategy: TKPertStrategy
+    # strategy: TruncateStrategy
+    strategy: TKPertStrategy
     # strategy:
     #   name: TKPertStrategy
     #   params:
@@ -43,8 +44,8 @@ phages_embedding_models:
       weights_path: data/weights/megaDNA_phage_145M.pt
       get_layer: avg
       overlap: 0
-    strategy: TruncateStrategy
-    # strategy: Tf4idfStrategy
+    # strategy: TruncateStrategy
+    strategy: TfidfStrategy
     # strategy:
     #   name: TKPertStrategy
     #   params:
@@ -55,8 +56,8 @@ phages_embedding_models:
       source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
       max_seq_len: 32768
       overlap: 0
-    strategy: TruncateStrategy
-    # strategy: MaxStrategy
+    # strategy: TruncateStrategy
+    strategy: Tf4idfStrategy
 
 bacteria_embedding_models:
   - name: NT2
@@ -75,20 +76,16 @@ bacteria_embedding_models:
       weights_path: data/weights/megaDNA_phage_145M.pt
       get_layer: avg
       overlap: 0
-    strategy: TruncateStrategy
-    # strategy: TKPertStrategy
-    # strategy:
-    #   name: TKPertStrategy
-    #   params:
-    #     merging_strategy: concat # concat or avg
+    # strategy: TruncateStrategy
+    strategy: MaxStrategy
   
   - name: DNABERT2
     params: 
       source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
       max_seq_len: 32768
       overlap: 0
-    strategy: TruncateStrategy
-    # strategy: TKPertStrategy
+    # strategy: TruncateStrategy
+    strategy: MaxStrategy
 
 # classifier: 
 #   name: CNNClassifier
@@ -98,12 +95,12 @@ bacteria_embedding_models:
 #     dense_dim: 100
 #     dense_dropout: 0.5
 
-classifier: 
-  name: BasicCNNClassifier
-  params:
-    cnn_params: "[(128, 3, 5), (64, 10, 5), (32, 10, 5)]"
-    dense_dim: 100
-    dense_dropout: 0.5
+# classifier: 
+#   name: BasicCNNClassifier
+#   params:
+#     cnn_params: "[(128, 3, 5), (64, 10, 5), (32, 10, 5)]"
+#     dense_dim: 100
+#     dense_dropout: 0.5
 
 # classifier:
 #   name: LinearClassifier
@@ -111,10 +108,24 @@ classifier:
 # classifier:
 #   name: BasicClassifier
 
+classifier:
+  name: SklearnClassifier
+  params:
+    sklearn_model_name: LGBMClassifier
+    sklearn_model_params:
+      n_estimators: 256
+      num_leaves: 63
+      boosting_type: gbdt # gbdt, dart, rf
+      force_col_wise: true
+      n_jobs: -10
+
 # classifier:
 #   name: SklearnClassifier
 #   params:
-#     sklearn_model_name: XGBClassifier
+#     sklearn_model_name: MLPClassifier
 #     sklearn_model_params:
-#       n_estimators: 100
-#       n_jobs: -10
+#       hidden_layer_sizes: [512, 256, 128]
+#       activation: relu
+#       learning_rate_init: 0.0005
+#       batch_size: 256
+#       max_iter: 500 # epochs for adam solver

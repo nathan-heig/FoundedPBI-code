@@ -47,12 +47,12 @@ bacteria_embedding_models:
 #     dense_dim: 100
 #     dense_dropout: 0.5
 
-classifier: 
-  name: BasicCNNClassifier
-  params:
-    cnn_params: "[(64, 3, 5), (32, 10, 5), (32, 10, 5)]"
-    dense_dim: 100
-    dense_dropout: 0.5
+# classifier: 
+#   name: BasicCNNClassifier
+#   params:
+#     cnn_params: "[(64, 3, 5), (32, 10, 5), (32, 10, 5)]"
+#     dense_dim: 100
+#     dense_dropout: 0.5
 
 # classifier:
 #   name: LinearClassifier
@@ -66,3 +66,15 @@ classifier:
 #     sklearn_model_name: RandomForestClassifier
 #     sklearn_model_params:
 #       n_estimators: 100
+
+classifier:
+  name: SklearnClassifier
+  params:
+    sklearn_model_name: MLPClassifier
+    sklearn_model_params:
+      hidden_layer_sizes: [256]
+      activation: relu
+      learning_rate_init: 0.001
+      batch_size: 256
+      max_iter: 100 # epochs for adam solver
+      verbose: true
