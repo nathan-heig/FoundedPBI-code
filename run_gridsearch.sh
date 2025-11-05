@@ -5,10 +5,10 @@ micromamba activate -n pbi
 # ===============================================
 # Settings
 # ===============================================
-repeats=3
+repeats=1
 max_jobs=100
 mkdir -p ./tmp/gridsearch_results
-csv_file=./test.csv
+csv_file=./gridsearch_merging_strategy.csv
 
 progress_file=.progress
 lock_file=.progress.lock
@@ -18,12 +18,12 @@ echo 0 > "$progress_file"
 # Parameter Grid
 # ===============================================
 declare -A param_grid=(
-  [NT2PHAGESTRAT]="MaxStrategy"
-  [NT2BACTSTRAT]="MaxStrategy"
-  [MEGADNAPHAGESTRAT]="TruncateStrategy"
-  [MEGADNABACTSTRAT]="TruncateStrategy"
-  [DNABERTPHAGESTRAT]="TruncateStrategy"
-  [DNABERTBACTSTRAT]="TruncateStrategy MaxStrategy"
+  [NT2PHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [NT2BACTSTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [MEGADNAPHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [MEGADNABACTSTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [DNABERTPHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [DNABERTBACTSTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
 )
 
 # ===============================================
@@ -131,6 +131,7 @@ run_one() {
         local LOG="./tmp/gridsearch_results/log${label}_run${i}.txt"
         echo "[$(date '+%H:%M:%S')] Running ${label} (repeat $i)..."
         python main.py -c model_configs/all_env.yaml &>"$LOG"
+        echo "[$(date '+%H:%M:%S')] Finished running ${label} (repeat $i)"
         local SCORE
         SCORE=$(tail -n 6 "$LOG" | grep -F "F1 score (CV): " | awk '{print $NF}' || echo "NaN")
         scores+=("$SCORE")
