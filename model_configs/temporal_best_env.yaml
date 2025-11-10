@@ -1,0 +1,115 @@
+# input_perphect: data/perphect-data/dummy
+input_perphect:
+  bacteria_df: data/perphect-data/all/bacteria_df.csv
+  phages_df: data/perphect-data/all/phages_df.csv
+  couples_df: data/perphect-data/all-private-oversampled/couples_df.csv
+embeddings_dir: data/embeddings
+# embeddings_dir: data/embeddings-dummy
+num_gpu: 1
+gpu_id: 1
+use_cached_embeddings: true
+# torch_num_threads: 1
+
+# Only useful when using torch classifiers
+training_config:
+  # do_train: true
+  epochs: 100
+  learning_rate: 1e-3
+  weight_decay: 1e-4
+  batch_size: 256
+
+  k_folds_cv: 3
+
+  patience_early_stopping: 100 # Disabled
+  monitor_metric_early_stopping: f1
+
+  patience_reduce_lr: 100 # Disabled
+  monitor_metric_reduce_lr: f1
+  multiplying_factor_reduce_lr: 0.5
+
+phages_embedding_models:
+  - name: NT2
+    params: 
+      model_name: nucleotide-transformer-v2-50m-multi-species
+      overlap: 0
+    strategy: TKPertStrategy
+  
+  - name: MegaDNA
+    params: 
+      weights_path: data/weights/megaDNA_phage_145M.pt
+      get_layer: avg
+      overlap: 0
+    strategy: Tf4idfStrategy
+
+  - name: DNABERT2
+    params: 
+      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
+      max_seq_len: 32768
+      overlap: 0
+    strategy: TKPertStrategy
+
+bacteria_embedding_models:
+  - name: NT2
+    params: 
+      model_name: nucleotide-transformer-v2-50m-multi-species
+      overlap: 0
+    strategy: TruncateStrategy
+  
+  - name: MegaDNA
+    params: 
+      weights_path: data/weights/megaDNA_phage_145M.pt
+      get_layer: avg
+      overlap: 0
+    strategy: TruncateStrategy
+  
+  - name: DNABERT2
+    params: 
+      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
+      max_seq_len: 32768
+      overlap: 0
+    strategy: MaxStrategy
+
+classifier: $CLASSIFIER
+
+# classifier: 
+#   name: CNNClassifier
+#   params:
+#     bacterium_conv_params: "[(64, 3, 5), (32, 10, 5), (32, 10, 5)]"
+#     phage_conv_params: "[(64, 3, 5), (32, 10, 5)]"
+#     dense_dim: 100
+#     dense_dropout: 0.5
+
+# classifier: 
+#   name: BasicCNNClassifier
+#   params:
+#     cnn_params: "[(128, 3, 5), (64, 10, 5), (32, 10, 5)]"
+#     dense_dim: 100
+#     dense_dropout: 0.5
+
+# classifier:
+#   name: LinearClassifier
+
+# classifier:
+#   name: BasicClassifier
+
+# classifier:
+#   name: SklearnClassifier
+#   params:
+#     sklearn_model_name: LGBMClassifier
+#     sklearn_model_params:
+#       n_estimators: 256
+#       num_leaves: 63
+#       boosting_type: gbdt # gbdt, dart, rf
+#       force_col_wise: true
+#       n_jobs: -10
+
+# classifier:
+#   name: SklearnClassifier
+#   params:
+#     sklearn_model_name: MLPClassifier
+#     sklearn_model_params:
+#       hidden_layer_sizes: [512, 256, 128]
+#       activation: relu
+#       learning_rate_init: 0.0005
+#       batch_size: 256
+#       max_iter: 500 # epochs for adam solver

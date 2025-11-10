@@ -18,12 +18,12 @@ echo 0 > "$progress_file"
 # Parameter Grid
 # ===============================================
 declare -A param_grid=(
-  [NT2PHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
-  [NT2BACTSTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [NT2PHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy"
+  [NT2BACTSTRAT]="MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
   [MEGADNAPHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
-  [MEGADNABACTSTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
-  [DNABERTPHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
-  [DNABERTBACTSTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [MEGADNABACTSTRAT]="TruncateStrategy MaxStrategy"
+  [DNABERTPHAGESTRAT]="TruncateStrategy MaxStrategy"
+  [DNABERTBACTSTRAT]="TruncateStrategy MaxStrategy"
 )
 
 # ===============================================
