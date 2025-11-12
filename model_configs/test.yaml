@@ -4,7 +4,7 @@ input_perphect:
   couples_df: data/perphect-data/all-private-oversampled/couples_df.csv
 embeddings_dir: data/embeddings
 num_gpu: 1
-gpu_id: 1
+gpu_id: 3
 use_cached_embeddings: true
 # torch_num_threads: 1
 
@@ -40,12 +40,18 @@ bacteria_embedding_models:
     strategy: TruncateStrategy
 
 # classifier: 
-#   name: CNNClassifier
+#   name: MLPClassifier
 #   params:
-#     bacterium_conv_params: "[(64, 3, 5), (32, 10, 5), (32, 10, 5)]"
-#     phage_conv_params: "[(64, 3, 5), (32, 10, 5)]"
+#     bacterium_mlp_sizes: [128, 64]
+#     phage_mlp_sizes: [512, 128, 64]
 #     dense_dim: 100
-#     dense_dropout: 0.5
+#     dropout: 0.2
+
+classifier: 
+  name: BasicMLPClassifier
+  params:
+    mlp_params: [512, 256, 128, 64, 32]
+    dropout: 0.2
 
 # classifier: 
 #   name: BasicCNNClassifier
@@ -67,14 +73,14 @@ bacteria_embedding_models:
 #     sklearn_model_params:
 #       n_estimators: 100
 
-classifier:
-  name: SklearnClassifier
-  params:
-    sklearn_model_name: MLPClassifier
-    sklearn_model_params:
-      hidden_layer_sizes: [256]
-      activation: relu
-      learning_rate_init: 0.001
-      batch_size: 256
-      max_iter: 100 # epochs for adam solver
-      verbose: true
+# classifier:
+#   name: SklearnClassifier
+#   params:
+#     sklearn_model_name: MLPClassifier
+#     sklearn_model_params:
+#       hidden_layer_sizes: [256]
+#       activation: relu
+#       learning_rate_init: 0.001
+#       batch_size: 256
+#       max_iter: 100 # epochs for adam solver
+#       verbose: true

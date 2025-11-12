@@ -66,5 +66,4 @@ bacteria_embedding_models:
       overlap: 0
     strategy: $DNABERTBACTSTRAT
 
-classifier:
-  name: BasicClassifier
+classifier: $CLASSIFIER
