@@ -6,7 +6,7 @@ micromamba activate -n pbi
 # Settings
 # ===============================================
 repeats=1
-max_jobs=70
+max_jobs=50
 mkdir -p ./tmp/gridsearch_results
 csv_file=./gridsearch_classifiers.csv
 
@@ -24,13 +24,15 @@ declare -A param_grid=(
   [MEGADNABACTSTRAT]="TruncateStrategy MaxStrategy"
   [DNABERTPHAGESTRAT]="TruncateStrategy MaxStrategy"
   [DNABERTBACTSTRAT]="TruncateStrategy MaxStrategy"
-  [CLASSIFIER]='
-{"name":"MLPClassifier","params":{"bacterium_mlp_sizes":[128,64],"phage_mlp_sizes":[128,64],"dense_dim":64,"dropout":0.2}}
-{"name":"BasicMLPClassifier","params":{"mlp_params":[128,64],"dropout":0.2}}
-{"name":"SklearnClassifier","params":{"sklearn_model_name":"LGBMClassifier","sklearn_model_params":{"n_estimators":350,"num_leaves":63,"n_jobs":1}}}
-{"name":"SklearnClassifier","params":{"sklearn_model_name":"XGBClassifier","sklearn_model_params":{"n_estimators":200,"tree_method":"hist","n_jobs":1}}}
-'
+  [CLASSIFIER]='{"name":"SklearnClassifier","params":{"sklearn_model_name":"RandomForestClassifier","sklearn_model_params":{"n_estimators":350,"n_jobs":1}}}'
 )
+
+#   [CLASSIFIER]='
+# {"name":"MLPClassifier","params":{"bacterium_mlp_sizes":[128,64],"phage_mlp_sizes":[128,64],"dense_dim":64,"dropout":0.2}}
+# {"name":"BasicMLPClassifier","params":{"mlp_params":[128,64],"dropout":0.2}}
+# {"name":"SklearnClassifier","params":{"sklearn_model_name":"LGBMClassifier","sklearn_model_params":{"n_estimators":350,"num_leaves":63,"n_jobs":1}}}
+# {"name":"SklearnClassifier","params":{"sklearn_model_name":"XGBClassifier","sklearn_model_params":{"n_estimators":200,"tree_method":"hist","n_jobs":1}}}
+# '
 
 # declare -A param_grid=(
 #     [N_ESTIMATORS]="50 100 200 350"
