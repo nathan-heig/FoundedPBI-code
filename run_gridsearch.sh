@@ -6,10 +6,16 @@ micromamba activate -n pbi
 # Settings
 # ===============================================
 repeats=1
-max_jobs=50
-mkdir -p ./tmp/gridsearch_results
-csv_file=./gridsearch_classifiers.csv
+max_jobs=70
+csv_file=./gridsearch_classifiers2.csv
+random_samples=-1 # -1 For gridsearch
+config_file=./model_configs/all_env.yaml
 
+
+# ===============================================
+# Setup
+# ===============================================
+mkdir -p ./tmp/gridsearch_results
 progress_file=.progress
 lock_file=.progress.lock
 echo 0 > "$progress_file"
@@ -18,19 +24,20 @@ echo 0 > "$progress_file"
 # Parameter Grid
 # ===============================================
 declare -A param_grid=(
-  [NT2PHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy"
-  [NT2BACTSTRAT]="MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
-  [MEGADNAPHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [NT2BACTSTRAT]="TruncateStrategy MaxStrategy"
   [MEGADNABACTSTRAT]="TruncateStrategy MaxStrategy"
-  [DNABERTPHAGESTRAT]="TruncateStrategy MaxStrategy"
   [DNABERTBACTSTRAT]="TruncateStrategy MaxStrategy"
-  [CLASSIFIER]='{"name":"SklearnClassifier","params":{"sklearn_model_name":"RandomForestClassifier","sklearn_model_params":{"n_estimators":350,"n_jobs":1}}}'
+  [NT2PHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [MEGADNAPHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [DNABERTPHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
+  [CLASSIFIER]='
+{"name":"SklearnClassifier","params":{"sklearn_model_name":"LGBMClassifier","sklearn_model_params":{"n_estimators":350,"num_leaves":63,"n_jobs":1}}}
+'
 )
 
 #   [CLASSIFIER]='
+# {"name":"SklearnClassifier","params":{"sklearn_model_name":"RandomForestClassifier","sklearn_model_params":{"n_estimators":350,"n_jobs":1}}}
 # {"name":"MLPClassifier","params":{"bacterium_mlp_sizes":[128,64],"phage_mlp_sizes":[128,64],"dense_dim":64,"dropout":0.2}}
-# {"name":"BasicMLPClassifier","params":{"mlp_params":[128,64],"dropout":0.2}}
-# {"name":"SklearnClassifier","params":{"sklearn_model_name":"LGBMClassifier","sklearn_model_params":{"n_estimators":350,"num_leaves":63,"n_jobs":1}}}
 # {"name":"SklearnClassifier","params":{"sklearn_model_name":"XGBClassifier","sklearn_model_params":{"n_estimators":200,"tree_method":"hist","n_jobs":1}}}
 # '
 
@@ -71,6 +78,21 @@ generate_combinations() {
         done <<< "$(echo "${param_grid[$key]}" | tr ' ' '\n')"
     }
     _generate_recursive 0 ""
+}
+
+generate_random_combinations() {
+    local keys=("$@")
+    for ((r=0; r<random_samples; r++)); do
+        local combo=()
+        for key in "${keys[@]}"; do
+            # Convert values to array
+            IFS=' ' read -r -a vals <<< "${param_grid[$key]}"
+            # Pick one random value
+            local val="${vals[$RANDOM % ${#vals[@]}]}"
+            combo+=("$key=$val")
+        done
+        printf "%s\n" "${combo[@]}"
+    done
 }
 
 # ===============================================
@@ -145,7 +167,8 @@ run_one() {
     for ((i=1; i<=repeats; i++)); do
         local LOG="./tmp/gridsearch_results/log${label}_run${i}.txt"
         echo "[$(date '+%H:%M:%S')] Running ${label} (repeat $i)..."
-        python main.py -c model_configs/all_env.yaml &>"$LOG"
+        # python main.py -c model_configs/all_env.yaml &>"$LOG"
+        python main.py -c "$config_file" &>"$LOG"
         echo "[$(date '+%H:%M:%S')] Finished running ${label} (repeat $i)"
         local SCORE
         SCORE=$(tail -n 6 "$LOG" | grep -F "F1 score (CV): " | awk '{print $NF}' || echo "NaN")
@@ -193,9 +216,20 @@ export csv_file progress_file lock_file repeats
 # ===============================================
 keys=("${!param_grid[@]}")
 
-generate_combinations "${keys[@]}"
+# generate_combinations "${keys[@]}"
 
-mapfile -t combos < <(generate_combinations "${keys[@]}")
+# If random_samples is -1, do full gridsearch
+if (( random_samples == -1 )); then
+    echo "Generating full gridsearch combinations..."
+    mapfile -t combos < <(generate_combinations "${keys[@]}")
+else
+    echo "Generating $random_samples random combinations..."
+    mapfile -t combos < <(generate_random_combinations "${keys[@]}")
+fi
+
+# mapfile -t combos < <(generate_combinations "${keys[@]}")
+# mapfile -t combos < <(generate_random_combinations "${keys[@]}")
+
 total=${#combos[@]}
 echo "Total combinations: $total"
 
