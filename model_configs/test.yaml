@@ -1,88 +1,52 @@
 input_perphect:
   bacteria_df: data/perphect-data/all/bacteria_df.csv
   phages_df: data/perphect-data/all/phages_df.csv
-  couples_df: data/perphect-data/all-private-oversampled/couples_df.csv
-embeddings_dir: data/embeddings
+  couples_df: data/perphect-data/all-private-undersampled/couples_df.csv
+embeddings_dir: data/embeddings-finetuned
 num_gpu: 1
-gpu_id: 0
-use_cached_embeddings: true
+gpu_id: 1
+# use_cached_embeddings: true
 # torch_num_threads: 1
 
 training_config:
   # do_train: true
-  epochs: 100
-  learning_rate: 1e-3
-  weight_decay: 0
+  # epochs: 100
+  # learning_rate: 1e-3
+  # weight_decay: 0
   batch_size: 256
 
   k_folds_cv: 3
 
-  patience_early_stopping: 100
-  monitor_metric_early_stopping: f1
+  # patience_early_stopping: 100
+  # monitor_metric_early_stopping: f1
 
-  patience_reduce_lr: 100
-  monitor_metric_reduce_lr: f1
-  multiplying_factor_reduce_lr: 0.5
+  # patience_reduce_lr: 100
+  # monitor_metric_reduce_lr: f1
+  # multiplying_factor_reduce_lr: 0.5
 
 
 phages_embedding_models:
-  - name: DNABERT2
+  - name: NT2
     params: 
-      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
-      max_seq_len: 32768
+      # model_name: nucleotide-transformer-v2-50m-multi-species
+      model_name: "./finetuning/model_weights/nt2-phages-lora/checkpoint-732"
       overlap: 0
-    strategy: TruncateStrategy
+    strategy: MaxStrategy
 
 bacteria_embedding_models:
-  - name: DNABERT2
+  - name: NT2
     params: 
-      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
-      max_seq_len: 32768
+      # model_name: nucleotide-transformer-v2-50m-multi-species
+      model_name: "./finetuning/model_weights/nt2-phages-lora/checkpoint-732"
       overlap: 0
-    strategy: TruncateStrategy
+    strategy: MaxStrategy
 
-# classifier: 
-#   name: MLPClassifier
-#   params:
-#     bacterium_mlp_sizes: [128, 64]
-#     phage_mlp_sizes: [512, 128, 64]
-#     dense_dim: 100
-#     dropout: 0.2
-
-classifier: 
-  name: BasicMLPClassifier
-  params:
-    mlp_params: [512, 256, 128, 64, 32]
-    dropout: 0.2
-
-# classifier: 
-#   name: BasicCNNClassifier
-#   params:
-#     cnn_params: "[(64, 3, 5), (32, 10, 5), (32, 10, 5)]"
-#     dense_dim: 100
-#     dense_dropout: 0.5
-
-# classifier:
-#   name: LinearClassifier
 
 classifier:
-  name: BasicClassifier
-
-# classifier:
-#   name: SklearnClassifier
-#   params:
-#     sklearn_model_name: RandomForestClassifier
-#     sklearn_model_params:
-#       n_estimators: 100
-
-# classifier:
-#   name: SklearnClassifier
-#   params:
-#     sklearn_model_name: MLPClassifier
-#     sklearn_model_params:
-#       hidden_layer_sizes: [256]
-#       activation: relu
-#       learning_rate_init: 0.001
-#       batch_size: 256
-#       max_iter: 100 # epochs for adam solver
-#       verbose: true
+  name: SklearnClassifier
+  params:
+    sklearn_model_name: LGBMClassifier
+    sklearn_model_params:
+      n_estimators: 350
+      num_leaves: 63
+      n_jobs: -20

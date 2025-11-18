@@ -1,10 +1,11 @@
 from pbi_models.embedders.abstract_model import AbstractModel
 import torch
 from pbi_utils.logging import Logging, logging
-from typing import Literal
+from typing import Literal, Union, get_args
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
 from pbi_utils.embeddings_merging_strategies.truncate_strategy import TruncateStrategy
+
 
 logger = Logging()
 
@@ -22,7 +23,7 @@ class NT2(AbstractModel):
         "nucleotide-transformer-v2-500m-multi-species": "500M"
     }
 
-    def __init__(self, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", model_name: MODEL_NAMES = "nucleotide-transformer-v2-50m-multi-species", load_model: bool = True):
+    def __init__(self, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", model_name: Union[MODEL_NAMES, str] = "nucleotide-transformer-v2-50m-multi-species", load_model: bool = True):
 
         self.device = device
         self.overlap = int(overlap)
@@ -34,12 +35,21 @@ class NT2(AbstractModel):
         if self.load_model:
             # Not show internal transformers logging messages
             current_log_level = logging.root.level
-            Logging.set_logging_level()
             
-            self.tokenizer = AutoTokenizer.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
-            self.model = AutoModelForMaskedLM.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
+            if model_name in get_args(self.MODEL_NAMES):
+                logger.debug(f"[NT2] Using InstaDeepAI default model weights")
+                Logging.set_logging_level()
+                self.tokenizer = AutoTokenizer.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
+                self.model = AutoModelForMaskedLM.from_pretrained(f"InstaDeepAI/{model_name}", trust_remote_code=True)
+                Logging.set_logging_level(current_log_level)
+
+            else:
+                logger.debug(f"[NT2] Using model weights from {model_name}") 
+                Logging.set_logging_level()
+                self.tokenizer = AutoTokenizer.from_pretrained(model_name) 
+                self.model = AutoModelForMaskedLM.from_pretrained(model_name, trust_remote_code=True)
+                Logging.set_logging_level(current_log_level)
             
-            Logging.set_logging_level(current_log_level)
 
 
             self.model.to(self.device)
@@ -77,7 +87,7 @@ class NT2(AbstractModel):
         return tokens_ids
 
     def name(self) -> str:
-        return f"NT2-{self.merging_strategy.name()}-{self.model_name2short_name[self.model_name]}-ov{self.overlap}"
+        return f"NT2-{self.merging_strategy.name()}-{self.model_name2short_name[self.model_name] if self.model_name in self.model_name2short_name else self.model_name}-ov{self.overlap}"
     
     def __repr__(self):
         return f"NT2(merging_strategy={self.merging_strategy}, overlap={self.overlap}, model_name='{self.model_name}')"
