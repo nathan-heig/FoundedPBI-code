@@ -214,3 +214,5 @@ tmp/
 .progress.lock
 
 out
+
+finetuning/phage_data/
