@@ -26,16 +26,6 @@ logger = Logging()
 
 def create_embeddings(bacteria_models: List[AbstractModel], phages_models: List[AbstractModel], bacteria_df: pd.DataFrame, phages_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame]:
     logger.info(f"Creating embeddings for {len(bacteria_models)} bacteria models and {len(phages_models)} phage models...")
-    # phages_encoded has columns: phage_id, embedding_MegaDNA, embedding_DNABert, etc.
-    phages_embed_names = [f"embedding_{model.name()}" for model in phages_models]
-    phages_encoded = pd.DataFrame(columns=["phage_id"] + phages_embed_names)
-    phages_encoded["phage_id"] = phages_df["phage_id"]
-
-    # Create all the embeddings for one model and then save them all at once
-    for phages_model in phages_models:
-        logger.debug(f"Creating phage embeddings for model {phages_model.name()}...")
-        phages_encoded[f"embedding_{phages_model.name()}"] = phages_df.progress_apply(lambda row: phages_model.embed(row["phage_sequence"]), axis=1) # type: ignore
-        output_manager.save_embeddings_batch(phages_encoded["phage_id"], phages_encoded[f"embedding_{phages_model.name()}"], model_name=phages_model.name(), overwrite=overwrite) # type: ignore
     
     # bacteria_encoded has columns: bacterium_id, embedding_MegaDNA, embedding_DNABert, etc.
     bacteria_embed_names = [f"embedding_{model.name()}" for model in bacteria_models]
@@ -47,6 +37,17 @@ def create_embeddings(bacteria_models: List[AbstractModel], phages_models: List[
         logger.debug(f"Creating bacteria embeddings for model {bacteria_model.name()}...")
         bacteria_encoded[f"embedding_{bacteria_model.name()}"] = bacteria_df.progress_apply(lambda row: bacteria_model.embed(row["bacterium_sequence"]), axis=1) # type: ignore
         output_manager.save_embeddings_batch(bacteria_encoded["bacterium_id"], bacteria_encoded[f"embedding_{bacteria_model.name()}"], model_name=bacteria_model.name(), overwrite=overwrite) # type: ignore
+    
+    # phages_encoded has columns: phage_id, embedding_MegaDNA, embedding_DNABert, etc.
+    phages_embed_names = [f"embedding_{model.name()}" for model in phages_models]
+    phages_encoded = pd.DataFrame(columns=["phage_id"] + phages_embed_names)
+    phages_encoded["phage_id"] = phages_df["phage_id"]
+
+    # Create all the embeddings for one model and then save them all at once
+    for phages_model in phages_models:
+        logger.debug(f"Creating phage embeddings for model {phages_model.name()}...")
+        phages_encoded[f"embedding_{phages_model.name()}"] = phages_df.progress_apply(lambda row: phages_model.embed(row["phage_sequence"]), axis=1) # type: ignore
+        output_manager.save_embeddings_batch(phages_encoded["phage_id"], phages_encoded[f"embedding_{phages_model.name()}"], model_name=phages_model.name(), overwrite=overwrite) # type: ignore
     
     return bacteria_encoded, phages_encoded
 

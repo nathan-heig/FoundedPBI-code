@@ -16,3 +16,4 @@ xgboost
 git+https://github.com/lingxusb/megaDNA@main
 
 transformers==4.42.3
+peft==0.10.0

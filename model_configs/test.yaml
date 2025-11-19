@@ -1,12 +1,12 @@
 input_perphect:
   bacteria_df: data/perphect-data/all/bacteria_df.csv
   phages_df: data/perphect-data/all/phages_df.csv
-  couples_df: data/perphect-data/all-private-undersampled/couples_df.csv
+  couples_df: data/perphect-data/all/couples_df.csv
+  # couples_df: data/perphect-data/all-private-undersampled/couples_df.csv
 embeddings_dir: data/embeddings-finetuned
 num_gpu: 1
-gpu_id: 1
+gpu_id: 0
 # use_cached_embeddings: true
-# torch_num_threads: 1
 
 training_config:
   # do_train: true

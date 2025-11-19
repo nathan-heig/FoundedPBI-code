@@ -1,26 +1,28 @@
 from abc import ABC, abstractmethod
+import time
 import torch
 
 from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
 from pbi_utils.embeddings_merging_strategies.truncate_strategy import TruncateStrategy
-from pbi_utils.utils import clean_gpu
 from tqdm import tqdm
 
 class AbstractModel(ABC):
 
     @abstractmethod
-    def __init__(self, max_seq_len: int, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, load_model: bool = True) -> None:
+    def __init__(self, max_seq_len: int, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, load_model: bool = True, batch_size: int = 1) -> None:
         """Abstract class for DNA sequence embedding models.
         Args:
             max_seq_len (int): Maximum sequence length for the model.
             merging_strategy (AbstractMergerStrategy, optional): Strategy to merge embeddings from subsequences. Defaults to TruncateStrategy().
             overlap (int, optional): Overlap size between subsequences. Defaults to 0.
             load_model (bool, optional): Whether to load the model for embedding computation. Defaults to True. If False, the embed method will raise an error, and should only be used to get the class name.
+            batch_size (int, optional): Batch size for embedding computation. Defaults to 1.
         """
         self.merging_strategy = merging_strategy
         self.overlap = int(overlap)
         self.max_seq_len = int(float(max_seq_len))
         self.load_model = load_model
+        self.batch_size = batch_size
         super().__init__()
 
     def embed(self, dna_sequence:str) -> torch.Tensor:
@@ -40,33 +42,32 @@ class AbstractModel(ABC):
         if self.merging_strategy.name() == "TruncateStrategy":
             sequences = [sequences[0]]
 
-        clean_gpu()
         # Get embeddings for each subsequence
+        t0 = time.time()
         tokens = self._encode(sequences)
+        print("Time to tokenize:", time.time() - t0)
+        t0 = time.time()
         embeddings = self._compute_batch_embeddings(tokens)
+        print("Time to embed:", time.time() - t0)
         embeddings = embeddings.squeeze(1)
 
         # Merge the embeddings using the specified strategy
         merged_embedding = self.merging_strategy.merge(sequences, embeddings)
-        clean_gpu()
         
         return merged_embedding
 
     def _compute_batch_embeddings(self, tokens: torch.Tensor) -> torch.Tensor:
-        embeddings_list = []
+        # Batch size is not useful, as it takes almost the same time as doing it one by one and it uses much more memory. Might be useful if model is parallelized
 
-        # Batch size is not useful, as it takes almost the same time as doing it one by one and it uses much more memory
+        outputs = []
 
-        if tokens.shape[0] > 50:
-            tokens = tqdm(tokens, desc="Embedding chunks") # type: ignore
+        with torch.no_grad():
+            for i in range(0, tokens.shape[0], self.batch_size):
+                batch = tokens[i:i+self.batch_size]
+                embeds = self._compute_single_embedding(batch)
+                outputs.append(embeds.cpu())
 
-        for sentence in tokens:
-            embeddings = self._compute_single_embedding(sentence.unsqueeze(0))
-            embeddings_list.append(embeddings)
-
-        embeddings = torch.stack(embeddings_list, dim=0)
-
-        return embeddings
+        return torch.cat(outputs, dim=0)
 
     # Divide sequence into overlapping subsequences
     def _split_sequence(self, sequence: str) -> list[str]:
