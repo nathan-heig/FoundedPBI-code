@@ -5,7 +5,7 @@ input_perphect:
   # couples_df: data/perphect-data/all-private-undersampled/couples_df.csv
 embeddings_dir: data/embeddings-finetuned
 num_gpu: 1
-gpu_id: 0
+gpu_id: 1
 # use_cached_embeddings: true
 
 training_config:
@@ -29,16 +29,20 @@ phages_embedding_models:
   - name: NT2
     params: 
       # model_name: nucleotide-transformer-v2-50m-multi-species
-      model_name: "./finetuning/model_weights/nt2-phages-lora/checkpoint-732"
+      model_name: "./finetuning/model_weights/nt2-phages-lora-ncbi/checkpoint-12200"
       overlap: 0
+      batch_size: 64
+      comma_separated_gpu_ids: "1,2,0"
     strategy: MaxStrategy
 
 bacteria_embedding_models:
   - name: NT2
     params: 
       # model_name: nucleotide-transformer-v2-50m-multi-species
-      model_name: "./finetuning/model_weights/nt2-phages-lora/checkpoint-732"
+      model_name: "./finetuning/model_weights/nt2-phages-lora-ncbi/checkpoint-12200"
       overlap: 0
+      batch_size: 64
+      comma_separated_gpu_ids: "1,2,0"
     strategy: MaxStrategy
 
 

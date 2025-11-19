@@ -6,6 +6,7 @@ from transformers import AutoTokenizer, AutoModelForMaskedLM
 from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
 from pbi_utils.embeddings_merging_strategies.truncate_strategy import TruncateStrategy
 import string
+import torch.nn as nn
 
 logger = Logging()
 
@@ -23,7 +24,7 @@ class NT2(AbstractModel):
         "nucleotide-transformer-v2-500m-multi-species": "500M"
     }
 
-    def __init__(self, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", model_name: Union[MODEL_NAMES, str] = "nucleotide-transformer-v2-50m-multi-species", load_model: bool = True, batch_size: int = 1):
+    def __init__(self, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", model_name: Union[MODEL_NAMES, str] = "nucleotide-transformer-v2-50m-multi-species", load_model: bool = True, batch_size: int = 1, comma_separated_gpu_ids: str = "") -> None:
 
         self.device = device
         self.overlap = int(overlap)
@@ -51,8 +52,10 @@ class NT2(AbstractModel):
                 self.model = AutoModelForMaskedLM.from_pretrained(model_name, trust_remote_code=True)
                 Logging.set_logging_level(current_log_level)
             
-
-
+            if comma_separated_gpu_ids != "":
+                logger.debug(f"[NT2] Using DataParallel with GPUs: {comma_separated_gpu_ids}")
+                self.model = nn.DataParallel(self.model, device_ids=[int(i) for i in comma_separated_gpu_ids.split(',')])
+                
             self.model.to(self.device)
             self.model.eval()
 
