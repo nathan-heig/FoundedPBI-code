@@ -5,6 +5,7 @@ import torch
 from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
 from pbi_utils.embeddings_merging_strategies.truncate_strategy import TruncateStrategy
 from tqdm import tqdm
+from pbi_utils.utils import clean_gpu
 
 class AbstractModel(ABC):
 
@@ -43,16 +44,14 @@ class AbstractModel(ABC):
             sequences = [sequences[0]]
 
         # Get embeddings for each subsequence
-        t0 = time.time()
         tokens = self._encode(sequences)
-        print("Time to tokenize:", time.time() - t0)
-        t0 = time.time()
         embeddings = self._compute_batch_embeddings(tokens)
-        print("Time to embed:", time.time() - t0)
         embeddings = embeddings.squeeze(1)
 
         # Merge the embeddings using the specified strategy
         merged_embedding = self.merging_strategy.merge(sequences, embeddings)
+
+        # clean_gpu()
         
         return merged_embedding
 
@@ -93,6 +92,10 @@ class AbstractModel(ABC):
         Returns:
             torch.Tensor: Tokenized sequences tensor of size [batch_size, self.max_seq_len]."""
         pass
+
+    def is_loaded(self) -> bool:
+        """Check if the model is loaded and ready to compute embeddings."""
+        return self.load_model
 
     def name(self) -> str:
         return f"{type(self).__name__}-{self.merging_strategy.name()}"

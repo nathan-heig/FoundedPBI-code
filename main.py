@@ -24,32 +24,43 @@ tqdm.pandas() # Initialize tqdm with pandas
 Logging.set_logging_level(DEBUG)
 logger = Logging()
 
-def create_embeddings(bacteria_models: List[AbstractModel], phages_models: List[AbstractModel], bacteria_df: pd.DataFrame, phages_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    logger.info(f"Creating embeddings for {len(bacteria_models)} bacteria models and {len(phages_models)} phage models...")
-    
-    # bacteria_encoded has columns: bacterium_id, embedding_MegaDNA, embedding_DNABert, etc.
-    bacteria_embed_names = [f"embedding_{model.name()}" for model in bacteria_models]
+def create_embeddings_bacteria(bacteria_models: List[AbstractModel], bacteria_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> None:
+        # bacteria_encoded has columns: bacterium_id, embedding_MegaDNA, embedding_DNABert, etc.
+    bacteria_embed_names = [f"embedding_{model.name()}" for model in bacteria_models if model.is_loaded()]
+
+    logger.info(f"Creating embeddings for {len(bacteria_embed_names)} bacteria models...")
+
     bacteria_encoded = pd.DataFrame(columns=["bacterium_id"] + bacteria_embed_names)
     bacteria_encoded["bacterium_id"] = bacteria_df["bacterium_id"]
 
     # Create all the embeddings for one model and then save them all at once
     for bacteria_model in bacteria_models:
+        if not bacteria_model.is_loaded():
+            logger.info(f"Skipping bacteria model {bacteria_model.name()} (use_cached_embeddings=True).")
+            continue
         logger.debug(f"Creating bacteria embeddings for model {bacteria_model.name()}...")
         bacteria_encoded[f"embedding_{bacteria_model.name()}"] = bacteria_df.progress_apply(lambda row: bacteria_model.embed(row["bacterium_sequence"]), axis=1) # type: ignore
         output_manager.save_embeddings_batch(bacteria_encoded["bacterium_id"], bacteria_encoded[f"embedding_{bacteria_model.name()}"], model_name=bacteria_model.name(), overwrite=overwrite) # type: ignore
     
+
+def create_embeddings_phages(phages_models: List[AbstractModel], phages_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> None:
     # phages_encoded has columns: phage_id, embedding_MegaDNA, embedding_DNABert, etc.
-    phages_embed_names = [f"embedding_{model.name()}" for model in phages_models]
+    phages_embed_names = [f"embedding_{model.name()}" for model in phages_models if model.is_loaded()]
+
+    logger.info(f"Creating embeddings for {len(phages_embed_names)} phages models...")
+
     phages_encoded = pd.DataFrame(columns=["phage_id"] + phages_embed_names)
     phages_encoded["phage_id"] = phages_df["phage_id"]
 
     # Create all the embeddings for one model and then save them all at once
     for phages_model in phages_models:
+        if not phages_model.is_loaded():
+            logger.info(f"Skipping phage model {phages_model.name()} (use_cached_embeddings=True).")
+            continue
         logger.debug(f"Creating phage embeddings for model {phages_model.name()}...")
         phages_encoded[f"embedding_{phages_model.name()}"] = phages_df.progress_apply(lambda row: phages_model.embed(row["phage_sequence"]), axis=1) # type: ignore
         output_manager.save_embeddings_batch(phages_encoded["phage_id"], phages_encoded[f"embedding_{phages_model.name()}"], model_name=phages_model.name(), overwrite=overwrite) # type: ignore
     
-    return bacteria_encoded, phages_encoded
 
 def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phages_model_names: List[str], output_manager: EmbeddingsManager, device: str) -> pd.DataFrame:
     result = couples_df.copy(deep=True)
@@ -398,9 +409,8 @@ if __name__ == "__main__":
     output_manager = H5pyEmbeddingsManager(config.embeddings_dir)
 
     
-    # Create embeddings (if not cached)
-    if not config.use_cached_embeddings:
-        create_embeddings(config.bacteria_embedding_models, config.phages_embedding_models, bacteria_df, phages_df, output_manager, overwrite=True)
+    create_embeddings_bacteria(config.bacteria_embedding_models, bacteria_df, output_manager, overwrite=True)
+    create_embeddings_phages(config.phages_embedding_models, phages_df, output_manager, overwrite=True)
 
     # Create datasets, train and test classifier
     if config.training_config.do_train:

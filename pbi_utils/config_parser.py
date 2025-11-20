@@ -21,6 +21,7 @@ class ModelConfig(BaseModel):
     name: str
     params: Dict[str, Any] = Field(default_factory=dict)
     strategy: StrategyConfig | str
+    use_cached_embeddings: bool = False # If true, do not calculate embeddings for this model, use cached ones from `embeddings_dir`
 
 class InputConfig(BaseModel):
     bacteria_df: str
@@ -54,7 +55,7 @@ class YAMLConfig(BaseModel):
     embeddings_dir: str = "data/embeddings" # The path where the embeddings will be stored and read from (default = data/embeddings)
     num_gpu: int = 1 # Number of GPUs available in the system. If 0, the model is run on the CPU (default = 0)
     gpu_id: int = 0 # Index of GPU to be employed (if 'num_gpu' == 1) (default = 0)
-    use_cached_embeddings: bool = False # Do not calculate embeddings, use cached ones. If set, `embeddings_dir` must point to a correct dir with the existing embeddings
+    # use_cached_embeddings: bool = False # Do not calculate embeddings, use cached ones. If set, `embeddings_dir` must point to a correct dir with the existing embeddings
     phages_embedding_models: List[ModelConfig] = Field(default_factory=list) # Name and parameters of the embedding model to use for the phages sequences. Use this flag multiple times to use multiple models
     bacteria_embedding_models: List[ModelConfig] = Field(default_factory=list) # Name and parameters of the embedding model to use for the bacteria sequences. Use this flag multiple times to use multiple models
     classifier: ClassifierConfig = Field(default_factory=lambda: ClassifierConfig(name="LinearClassifier", params={})) # Model to use to classify the embeddings. Must be a subclass of `AbstractClassifier`, implemented in `pbi_models.classifiers`
@@ -74,7 +75,6 @@ class Config:
         self.embeddings_dir = yaml_config.embeddings_dir
         self.num_gpu = yaml_config.num_gpu
         self.gpu_id = yaml_config.gpu_id
-        self.use_cached_embeddings = yaml_config.use_cached_embeddings
         self.training_config = yaml_config.training_config
         self.device = "cpu" if self.num_gpu == 0 else f"cuda:{self.gpu_id}"
         self.phages_embedding_models = self._parse_models(yaml_config.phages_embedding_models)
@@ -94,7 +94,7 @@ class Config:
             model_params = model_config.params
             model_params["merging_strategy"] = merging_strategy
             model_params["device"] = self.device
-            model_params["load_model"] = not self.use_cached_embeddings
+            model_params["load_model"] = not model_config.use_cached_embeddings
 
             model = self._get_instance_from_string(model_config.name, subclass_of=AbstractModel)(**model_params)
             models.append(model)
@@ -109,7 +109,7 @@ class Config:
 
     def __repr__(self):
         return (f"Config(input_perphect={self.input_perphect}, embeddings_dir={self.embeddings_dir}, "
-                f"num_gpu={self.num_gpu}, gpu_id={self.gpu_id}, use_cached_embeddings={self.use_cached_embeddings}, "
+                f"num_gpu={self.num_gpu}, gpu_id={self.gpu_id}, "
                 f"training_config=TrainingConfig({self.training_config}), "
                 f"phages_embedding_models={self.phages_embedding_models}, "
                 f"bacteria_embedding_models={self.bacteria_embedding_models}, "
