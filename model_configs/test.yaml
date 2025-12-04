@@ -6,19 +6,19 @@ input_perphect:
 # embeddings_dir: data/embeddings-finetuned
 embeddings_dir: data/embeddings
 num_gpu: 1
-gpu_id: 1
+gpu_id: 0
 
 training_config:
-  # do_train: true
-  # epochs: 100
-  # learning_rate: 1e-3
-  # weight_decay: 0
+  do_train: true
+  epochs: 50
+  learning_rate: 1e-3
+  weight_decay: 0
   batch_size: 256
 
   k_folds_cv: 3
 
-  # patience_early_stopping: 100
-  # monitor_metric_early_stopping: f1
+  patience_early_stopping: 15
+  monitor_metric_early_stopping: f1
 
   # patience_reduce_lr: 100
   # monitor_metric_reduce_lr: f1
@@ -28,31 +28,59 @@ training_config:
 phages_embedding_models:
   - name: NT2
     params: 
-      model_name: nucleotide-transformer-v2-50m-multi-species
-      # model_name: "./finetuning/model_weights/nt2-phages-lora-perphect/checkpoint-12400"
+      model_name: nucleotide-transformer-v2-250m-multi-species
+      # model_name: "./finetuning/model_weights/nt2-phages-lora-perphect/checkpoint-39500"
       overlap: 0
       batch_size: 16
-      comma_separated_gpu_ids: "1,2,0"
-    strategy: MaxStrategy
+      comma_separated_gpu_ids: "0"
+    strategy: TruncateStrategy
+    use_cached_embeddings: true
+
+  - name: DNABERT2
+    params: 
+      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
+      max_seq_len: 32768
+      overlap: 0
+    strategy: TruncateStrategy
+    use_cached_embeddings: true
+
+  - name: MegaDNA
+    params: 
+      weights_path: data/weights/megaDNA_phage_145M.pt
+      get_layer: concat
+      overlap: 0
+    strategy: TruncateStrategy
     use_cached_embeddings: true
 
 bacteria_embedding_models:
   - name: NT2
     params: 
-      model_name: nucleotide-transformer-v2-50m-multi-species
-      # model_name: "./finetuning/model_weights/nt2-phages-lora-ncbi/checkpoint-12200"
+      model_name: nucleotide-transformer-v2-250m-multi-species
+      # model_name: "./finetuning/model_weights/nt2-bact-lora-perphect/checkpoint-5000"
       overlap: 0
       batch_size: 16
-      comma_separated_gpu_ids: "1,2,0"
-    strategy: MaxStrategy
+      comma_separated_gpu_ids: "0"
+    strategy: TruncateStrategy
+    use_cached_embeddings: true
+
+  - name: DNABERT2
+    params: 
+      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
+      max_seq_len: 32768
+      overlap: 0
+    strategy: TruncateStrategy
+    use_cached_embeddings: true
+
+  - name: MegaDNA
+    params: 
+      weights_path: data/weights/megaDNA_phage_145M.pt
+      get_layer: concat
+      overlap: 0
+    strategy: TruncateStrategy
     use_cached_embeddings: true
 
 
 classifier:
-  name: SklearnClassifier
+  name: BasicClassifier
   params:
-    sklearn_model_name: LGBMClassifier
-    sklearn_model_params:
-      n_estimators: 350
-      num_leaves: 63
-      n_jobs: -20
+    hidden_dim: 256

@@ -95,15 +95,15 @@ bacteria_embedding_models:
 classifier:
   name: SklearnClassifier
   params:
-    sklearn_model_name: XGBClassifier
+    sklearn_model_name: RandomForestClassifier
     sklearn_model_params:
-      n_estimators: 350
+      n_estimators: 1000
       # max_leaves: 63
       # grow_policy: depthwise # depthwise lossguide
       # booster: gbtree # gbtree gblinear dart
-      tree_method: hist # exact approx hist
-      verbosity: 1
-      n_jobs: 20
+      # tree_method: hist # exact approx hist
+      # verbosity: 1
+      n_jobs: -20
 
 # classifier:
 #   name: SklearnClassifier

@@ -217,3 +217,5 @@ out
 
 finetuning/phage_data/
 finetuning/model_weights/
+finetuning/DNABERT_2/
+finetuning/datasets/

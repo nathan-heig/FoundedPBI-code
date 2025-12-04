@@ -7,7 +7,7 @@ scikit-learn
 matplotlib
 seaborn
 pydantic
-transformers==4.42.3
+transformers==4.51.*
 ipykernel
 ipywidgets
 
@@ -15,4 +15,4 @@ datasets
 biopython
 accelerate
 torch==2.1.2
-peft==0.10.0
+peft==0.17.*

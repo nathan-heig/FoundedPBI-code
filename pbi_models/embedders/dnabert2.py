@@ -12,6 +12,7 @@ class DNABERT2(AbstractModel):
     def __init__(self, merging_strategy: AbstractMergerStrategy, source_code_path: str, device: str = "cpu", overlap: int = 0, max_seq_len: int = 2**15, load_model: bool = True) -> None:
 
         self.load_model = load_model
+        self.batch_size = 1
 
         self.device = device
         self.merging_strategy = merging_strategy
@@ -42,6 +43,9 @@ class DNABERT2(AbstractModel):
 
         # embedding with mean pooling
         mean_embed = torch.mean(output[0], dim=0)
+        # mean_embed = torch.max(output[0], dim=0)[0]
+
+        mean_embed = mean_embed.unsqueeze(0)  # add batch dimension back
 
         return mean_embed
 

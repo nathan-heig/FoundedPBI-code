@@ -14,6 +14,7 @@ class MegaDNA(AbstractModel):
     def __init__(self, weights_path: str, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, device: str = "cpu", get_layer: Literal["concat", "last"] = "last", load_model: bool = True) -> None:
 
         self.load_model = load_model
+        self.batch_size = 1
 
 
         if self.load_model:
