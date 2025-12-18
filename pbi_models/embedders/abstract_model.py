@@ -10,7 +10,7 @@ from pbi_utils.utils import clean_gpu
 class AbstractModel(ABC):
 
     @abstractmethod
-    def __init__(self, max_seq_len: int, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), overlap: int = 0, load_model: bool = True, batch_size: int = 1) -> None:
+    def __init__(self, max_seq_len: int, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), device="cpu", overlap: int = 0, load_model: bool = True, batch_size: int = 1) -> None:
         """Abstract class for DNA sequence embedding models.
         Args:
             max_seq_len (int): Maximum sequence length for the model.
@@ -24,6 +24,7 @@ class AbstractModel(ABC):
         self.max_seq_len = int(float(max_seq_len))
         self.load_model = load_model
         self.batch_size = batch_size
+        self.device = device
         super().__init__()
 
     def embed(self, dna_sequence:str) -> torch.Tensor:
@@ -63,7 +64,7 @@ class AbstractModel(ABC):
         with torch.no_grad():
             for i in range(0, tokens.shape[0], self.batch_size):
                 batch = tokens[i:i+self.batch_size]
-                embeds = self._compute_single_embedding(batch)
+                embeds = self._compute_single_embedding(batch.to(self.device))
                 outputs.append(embeds.cpu())
 
         return torch.cat(outputs, dim=0)

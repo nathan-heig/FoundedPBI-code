@@ -89,8 +89,8 @@ class NT2(AbstractModel):
     
     def _encode(self, dna_sequence: list[str]) -> torch.Tensor:
         # Tokenize the entire sequence at once
-        tokens_ids = self.tokenizer.batch_encode_plus(dna_sequence, return_tensors="pt", padding=True)["input_ids"].to(self.device)
-        
+        # tokens_ids = self.tokenizer.batch_encode_plus(dna_sequence, return_tensors="pt", padding=True, truncation=True)["input_ids"].to("cpu") # Keep on CPU for OOM reasons, will be moved to device later
+        tokens_ids = self.tokenizer.batch_encode_plus(dna_sequence, return_tensors="pt", padding=True, truncation=True)["input_ids"].to(self.device)
         return tokens_ids
 
     def name(self) -> str:

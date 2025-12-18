@@ -6,8 +6,9 @@ micromamba activate -n pbi
 # Settings
 # ===============================================
 repeats=1
-max_jobs=70
-csv_file=./gridsearch_classifiers2.csv
+max_jobs=55
+csv_file=./gridsearch_merging_strategy_final.csv
+# Only -1 is working for now...
 random_samples=-1 # -1 For gridsearch
 config_file=./model_configs/all_env.yaml
 
@@ -24,17 +25,17 @@ echo 0 > "$progress_file"
 # Parameter Grid
 # ===============================================
 declare -A param_grid=(
-  [NT2BACTSTRAT]="TruncateStrategy MaxStrategy"
-  [MEGADNABACTSTRAT]="TruncateStrategy MaxStrategy"
-  [DNABERTBACTSTRAT]="TruncateStrategy MaxStrategy"
-  [NT2PHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
-  [MEGADNAPHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
-  [DNABERTPHAGESTRAT]="TruncateStrategy MaxStrategy TfidfStrategy Tf4idfStrategy TKPertStrategy"
-  [CLASSIFIER]='
-{"name":"SklearnClassifier","params":{"sklearn_model_name":"LGBMClassifier","sklearn_model_params":{"n_estimators":350,"num_leaves":63,"n_jobs":1}}}
-'
+  [NT2BACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+  [MEGADNABACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+  [DNABERTBACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+  [NT2PHAGESTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+  [MEGADNAPHAGESTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+  [DNABERTPHAGESTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
 )
 
+#   [CLASSIFIER]='
+# {"name":"SklearnClassifier","params":{"sklearn_model_name":"LGBMClassifier","sklearn_model_params":{"n_estimators":350,"num_leaves":63,"n_jobs":1}}}
+# '
 #   [CLASSIFIER]='
 # {"name":"SklearnClassifier","params":{"sklearn_model_name":"RandomForestClassifier","sklearn_model_params":{"n_estimators":350,"n_jobs":1}}}
 # {"name":"MLPClassifier","params":{"bacterium_mlp_sizes":[128,64],"phage_mlp_sizes":[128,64],"dense_dim":64,"dropout":0.2}}
@@ -141,7 +142,7 @@ run_one() {
     for env in $decoded; do
       # errcho "Env var: $env"
       IFS='=' read -r k v <<< $env
-      # errcho "exporting $k = $v"
+    #   errcho "exporting $k = $v"
       export "$k"="$v"
       vars+=($v)
     done
