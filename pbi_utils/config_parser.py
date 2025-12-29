@@ -9,6 +9,7 @@ from pbi_models.classifiers.abstract_classifier import AbstractNNClassifier
 from pbi_models.embedders.abstract_model import AbstractModel
 from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
 from pbi_utils.logging import Logging
+from pbi_utils.types import *
 import os
 
 logger = Logging()
@@ -41,14 +42,16 @@ class TrainingConfig(BaseModel):
 
     k_folds_cv: int = 3 # Train the classifier model using `k_folds`-Fold cross validation
 
-    patience_early_stopping: int = 10 # Number of epochs to wait without performance increase before the training is interrupted
+    patience_early_stopping: int = 1000 # Number of epochs to wait without performance increase before the training is interrupted
     monitor_metric_early_stopping: Literal["f1", "loss"] = "f1" # The metric to decide wether the model is performing better or not
     
-    patience_reduce_lr: int = 5 # Number of epochs to wait before reducing the learning rate
+    patience_reduce_lr: int = 1000 # Number of epochs to wait before reducing the learning rate
     monitor_metric_reduce_lr: Literal["f1", "loss"] = "f1" # The metric to decide wether the model is performing better or not
     multiplying_factor_reduce_lr: float = 0.5 # Multiply the learning rate with this after `patience_reduce_lr` epochs without improvement 
     
-
+    reduce_dimensionality: DIMENSIONALITY_REDUCTION_TECHNIQUE = "none" # The dimensionality reduction technique to apply to the merged embeddings. If "none", do not use any
+    n_components_bacteria: int | None = None # If `reduce_dimensionality` is used, only save this number of components. If None, use them all
+    n_components_phages: int | None = None # If `reduce_dimensionality` is used, only save this number of components. If None, use them all
 
 class YAMLConfig(BaseModel):
     input_perphect: str | InputConfig # The path of the folder containing the input data in the Perphect format. The folder must contain the following files: `bacteria_df.csv` (with the columns: `bacterium_id,bacterium_sequence,sequence_length`), `phages_df.csv` (with the columns: `phage_id,phage_sequence,sequence_length`) and `couples_df.csv` (with the columns: `id,bacterium_id,phage_id,interaction_type`, where `interaction_type` is either 1 or 0)
@@ -61,6 +64,7 @@ class YAMLConfig(BaseModel):
     classifier: ClassifierConfig = Field(default_factory=lambda: ClassifierConfig(name="LinearClassifier", params={})) # Model to use to classify the embeddings. Must be a subclass of `AbstractClassifier`, implemented in `pbi_models.classifiers`
     torch_num_threads: int = -1 # Number of threads used by PyTorch. If -1, the maximum number of threads is used
     training_config: TrainingConfig
+    output_dir: str | None = None # Output folder. If none, do not output anything
 
 class Config:
     def __init__(self, yaml_config: YAMLConfig, raw_dict):
@@ -82,6 +86,7 @@ class Config:
         self.classifier = self._get_instance_from_string(yaml_config.classifier.name, subclass_of=(AbstractNNClassifier, SklearnClassifier)) # The classifier is not instantiated yet because we need to know the embedding dimensions first, and that is only known after loading them (in main.py)
         self.classifier_params = yaml_config.classifier.params
         self.torch_num_threads = yaml_config.torch_num_threads
+        self.output_dir = yaml_config.output_dir
 
     def _parse_models(self, models_config: List[ModelConfig]) -> List[AbstractModel]:
         models = []
@@ -114,6 +119,7 @@ class Config:
                 f"phages_embedding_models={self.phages_embedding_models}, "
                 f"bacteria_embedding_models={self.bacteria_embedding_models}, "
                 f"torch_num_threads={self.torch_num_threads}, "
+                f"output_dir={self.output_dir}, "
                 f"classifier={self.classifier.__name__}({self.classifier_params})"
                 f")"
                 )

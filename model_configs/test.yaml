@@ -5,7 +5,8 @@ input_perphect:
   couples_df: data/perphect-data/all-private-oversampled/couples_df.csv
 # embeddings_dir: data/embeddings-finetuned
 embeddings_dir: data/embeddings
-num_gpu: 1
+output_dir: output/
+num_gpu: 0
 gpu_id: 0
 
 training_config:
@@ -14,6 +15,9 @@ training_config:
   learning_rate: 1e-3
   weight_decay: 0
   batch_size: 256
+
+  reduce_dimensionality: PCA
+  n_components: 250
 
   k_folds_cv: 3
 
@@ -36,21 +40,21 @@ phages_embedding_models:
     strategy: TruncateStrategy
     use_cached_embeddings: true
 
-  # - name: DNABERT2
-  #   params: 
-  #     source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
-  #     max_seq_len: 32768
-  #     overlap: 0
-  #   strategy: TruncateStrategy
-  #   use_cached_embeddings: true
+  - name: DNABERT2
+    params: 
+      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
+      max_seq_len: 32768
+      overlap: 0
+    strategy: TruncateStrategy
+    use_cached_embeddings: true
 
-  # - name: MegaDNA
-  #   params: 
-  #     weights_path: data/weights/megaDNA_phage_145M.pt
-  #     get_layer: concat
-  #     overlap: 0
-  #   strategy: TruncateStrategy
-  #   use_cached_embeddings: true
+  - name: MegaDNA
+    params: 
+      weights_path: data/weights/megaDNA_phage_145M.pt
+      get_layer: concat
+      overlap: 0
+    strategy: TruncateStrategy
+    use_cached_embeddings: true
 
 bacteria_embedding_models:
   - name: NT2
@@ -82,5 +86,3 @@ bacteria_embedding_models:
 
 classifier:
   name: BasicClassifier
-  params:
-    hidden_dim: 256

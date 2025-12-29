@@ -5,20 +5,23 @@ input_perphect:
   couples_df: data/perphect-data/all-private-oversampled/couples_df.csv
 embeddings_dir: data/embeddings
 # embeddings_dir: data/embeddings-dummy
-num_gpu: 1
+output_dir: output/
+num_gpu: 0
 gpu_id: 3
-use_cached_embeddings: true
 # torch_num_threads: 1
 
-# Only useful when using torch classifiers
 training_config:
   # do_train: true
-  epochs: 100
+  epochs: 50
   learning_rate: 1e-3
-  weight_decay: 1e-4
+  weight_decay: 0
   batch_size: 256
 
-  k_folds_cv: 3
+  reduce_dimensionality: PCA
+  n_components_bacteria: 500
+  n_components_phages: 500
+
+  k_folds_cv: 10
 
   patience_early_stopping: 100 # Disabled
   monitor_metric_early_stopping: f1
@@ -30,16 +33,18 @@ training_config:
 phages_embedding_models:
   - name: NT2
     params: 
-      model_name: nucleotide-transformer-v2-50m-multi-species
+      model_name: nucleotide-transformer-v2-250m-multi-species
       overlap: 0
-    strategy: TKPertStrategy
-  
+    strategy: TopBottomTruncateStrategy
+    use_cached_embeddings: true
+
   - name: MegaDNA
     params: 
       weights_path: data/weights/megaDNA_phage_145M.pt
-      get_layer: avg
+      get_layer: concat
       overlap: 0
-    strategy: Tf4idfStrategy
+    strategy: MaxStrategy
+    use_cached_embeddings: true
 
   - name: DNABERT2
     params: 
@@ -47,27 +52,31 @@ phages_embedding_models:
       max_seq_len: 32768
       overlap: 0
     strategy: TKPertStrategy
+    use_cached_embeddings: true
 
 bacteria_embedding_models:
   - name: NT2
     params: 
-      model_name: nucleotide-transformer-v2-50m-multi-species
+      model_name: nucleotide-transformer-v2-250m-multi-species
       overlap: 0
-    strategy: TruncateStrategy
-  
+    strategy: TopBottomTruncateStrategy
+    use_cached_embeddings: true
+
   - name: MegaDNA
     params: 
       weights_path: data/weights/megaDNA_phage_145M.pt
-      get_layer: avg
+      get_layer: concat
       overlap: 0
-    strategy: TruncateStrategy
-  
+    strategy: BottomTruncateStrategy
+    use_cached_embeddings: true
+
   - name: DNABERT2
     params: 
       source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
       max_seq_len: 32768
       overlap: 0
-    strategy: MaxStrategy
+    strategy: TopBottomTruncateStrategy
+    use_cached_embeddings: true
 
 # classifier: $CLASSIFIER
 
@@ -89,21 +98,21 @@ bacteria_embedding_models:
 # classifier:
 #   name: LinearClassifier
 
-# classifier:
-#   name: BasicClassifier
-
 classifier:
-  name: SklearnClassifier
-  params:
-    sklearn_model_name: RandomForestClassifier
-    sklearn_model_params:
-      n_estimators: 1000
-      # max_leaves: 63
-      # grow_policy: depthwise # depthwise lossguide
-      # booster: gbtree # gbtree gblinear dart
-      # tree_method: hist # exact approx hist
-      # verbosity: 1
-      n_jobs: -20
+  name: BasicClassifier
+
+# classifier:
+#   name: SklearnClassifier
+#   params:
+#     sklearn_model_name: RandomForestClassifier
+#     sklearn_model_params:
+#       n_estimators: 1000
+#       # max_leaves: 63
+#       # grow_policy: depthwise # depthwise lossguide
+#       # booster: gbtree # gbtree gblinear dart
+#       # tree_method: hist # exact approx hist
+#       # verbosity: 1
+#       n_jobs: -20
 
 # classifier:
 #   name: SklearnClassifier

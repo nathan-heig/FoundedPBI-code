@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import sys
+from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -19,6 +20,9 @@ import time
 from pbi_utils.utils import Stats
 from pbi_utils.embeddings_merging_strategies import *
 from sklearn.metrics import confusion_matrix
+from pbi_utils.types import *
+import os
+from sklearn.decomposition import PCA
 
 tqdm.pandas() # Initialize tqdm with pandas
 Logging.set_logging_level(DEBUG)
@@ -42,7 +46,6 @@ def create_embeddings_bacteria(bacteria_models: List[AbstractModel], bacteria_df
         bacteria_encoded[f"embedding_{bacteria_model.name()}"] = bacteria_df.progress_apply(lambda row: bacteria_model.embed(row["bacterium_sequence"]), axis=1) # type: ignore
         output_manager.save_embeddings_batch(bacteria_encoded["bacterium_id"], bacteria_encoded[f"embedding_{bacteria_model.name()}"], model_name=bacteria_model.name(), overwrite=overwrite) # type: ignore
     
-
 def create_embeddings_phages(phages_models: List[AbstractModel], phages_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> None:
     # phages_encoded has columns: phage_id, embedding_MegaDNA, embedding_DNABert, etc.
     phages_embed_names = [f"embedding_{model.name()}" for model in phages_models if model.is_loaded()]
@@ -61,7 +64,6 @@ def create_embeddings_phages(phages_models: List[AbstractModel], phages_df: pd.D
         phages_encoded[f"embedding_{phages_model.name()}"] = phages_df.progress_apply(lambda row: phages_model.embed(row["phage_sequence"]), axis=1) # type: ignore
         output_manager.save_embeddings_batch(phages_encoded["phage_id"], phages_encoded[f"embedding_{phages_model.name()}"], model_name=phages_model.name(), overwrite=overwrite) # type: ignore
     
-
 def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phages_model_names: List[str], output_manager: EmbeddingsManager, device: str) -> pd.DataFrame:
     result = couples_df.copy(deep=True)
 
@@ -84,6 +86,43 @@ def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phag
     logger.debug(f"Final embedding size (phages): {len(result['phage_embedding'].iloc[0])}")
 
     return result
+
+def reduce_dimensionality(dataset: pd.DataFrame, technique: DIMENSIONALITY_REDUCTION_TECHNIQUE, output_dir: str | None, n_components_bact: int | None, n_components_phag: int | None) -> pd.DataFrame:
+    def plot_exp_variance(exp_var, output_path: str, title: str = "PCA Explained Variance"):
+        cum_sum = np.cumsum(exp_var)
+
+        _, ax = plt.subplots(figsize=(10, 6))
+        ax.step(range(1, len(cum_sum) + 1), cum_sum, where="mid", label="Cumulative explained variance")
+
+        ax.set_ylabel("Explained variance")
+        ax.set_xlabel("nº of components")
+        ax.set_title(title)
+        ax.legend(loc="best")
+        ax.grid(True, linestyle="--", alpha=0.6)
+        plt.tight_layout()
+        plt.savefig(output_path)
+    
+    if technique == "none":
+        pass
+    elif technique == "PCA":
+        pca_bact = PCA(random_state=42, n_components=n_components_bact)
+        dataset["bacterium_embedding"] = list(torch.from_numpy(pca_bact.fit_transform(dataset["bacterium_embedding"].apply(lambda x: x.detach().cpu().numpy()).to_list())).float()) # type: ignore
+
+        pca_phag = PCA(random_state=42, n_components=n_components_phag)
+        dataset["phage_embedding"] = list(torch.from_numpy(pca_phag.fit_transform(dataset["phage_embedding"].apply(lambda x: x.detach().cpu().numpy()).to_list())).float()) # type: ignore
+        
+        if output_dir is not None:
+            os.makedirs(output_dir, exist_ok=True)
+
+            plot_exp_variance(pca_bact.explained_variance_ratio_, os.path.join(output_dir, "pca_explained_variance_bacterium.png"), "PCA Explained Variance (Bacterium Embedding)")
+            plot_exp_variance(pca_phag.explained_variance_ratio_, os.path.join(output_dir, "pca_explained_variance_phage.png"), "PCA Explained Variance (Phage Embedding)")
+    else:
+        raise ValueError(f"{technique} for dimensionality reduction not supported. Allowed values: {DIMENSIONALITY_REDUCTION_TECHNIQUE}")
+
+    logger.debug(f"Embedding size (After dimensionality reduction) (bacteria): {len(dataset['bacterium_embedding'].iloc[0])}")
+    logger.debug(f"Embedding size (After dimensionality reduction) (phages): {len(dataset['phage_embedding'].iloc[0])}")
+
+    return dataset
 
 def dataframe_to_tf_dataloader(df: pd.DataFrame, batch_size: int, device: str):
     dataset = TensorDataset(
@@ -417,7 +456,10 @@ if __name__ == "__main__":
         # Create train and test datasets
         bacteria_model_names = [x.name() for x in config.bacteria_embedding_models]
         phages_model_names = [x.name() for x in config.phages_embedding_models]
-        dataset = make_dataset(couples_df, bacteria_model_names, phages_model_names , output_manager, device)
+        dataset = make_dataset(couples_df, bacteria_model_names, phages_model_names, output_manager, device)
+
+        dataset = reduce_dimensionality(dataset, config.training_config.reduce_dimensionality, config.output_dir, config.training_config.n_components_bacteria, config.training_config.n_components_phages)
+        
         train, test = train_test_split(dataset, test_size=0.2, random_state=42, shuffle=True)
 
         stats = Stats(config)
