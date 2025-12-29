@@ -17,7 +17,7 @@ training_config:
   weight_decay: 0
   batch_size: 256
 
-  reduce_dimensionality: PCA
+  reduce_dimensionality: none
   n_components_bacteria: 500
   n_components_phages: 500
 

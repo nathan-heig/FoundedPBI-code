@@ -65,6 +65,20 @@ def create_embeddings_phages(phages_models: List[AbstractModel], phages_df: pd.D
         output_manager.save_embeddings_batch(phages_encoded["phage_id"], phages_encoded[f"embedding_{phages_model.name()}"], model_name=phages_model.name(), overwrite=overwrite) # type: ignore
     
 def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phages_model_names: List[str], output_manager: EmbeddingsManager, device: str) -> pd.DataFrame:
+    def avg_tensors(sequences):
+        import torch.nn.functional as F
+        num = len(sequences)
+        max_len = max([s.size(0) for s in sequences])
+        out_dims = (num, max_len)
+        out_tensor = sequences[0].data.new(*out_dims).fill_(0)
+        mask = sequences[0].data.new(*out_dims).fill_(0)
+        for i, tensor in enumerate(sequences):
+            length = tensor.size(0)
+            out_tensor[i, :length] = tensor
+            mask[i, :length] = 1
+        
+        return torch.mean(out_tensor, dim=0)
+    
     result = couples_df.copy(deep=True)
 
     logger.info(f"Creating dataset (loading embeddings)...")
@@ -76,11 +90,13 @@ def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phag
     # The embeddings are concatenated to form 1 final embedding per bacterium/phage. 
     # TODO: One of the papers mentions that you can also simply add them, to reduce the final size, consider testing it.
     result["bacterium_embedding"] = pd.Series([torch.cat(embeds) for embeds in zip(*bacteria_embeddings)])
+    # result["bacterium_embedding"] = pd.Series([avg_tensors(embeds) for embeds in zip(*bacteria_embeddings)]) # Avg of the embeddings instead of concat
 
     phage_embeddings = []
     for phage_model in phages_model_names:
         phage_embeddings.append(output_manager.load_embedding_batch(result["phage_id"].tolist(), model_name=phage_model, device=device))
     result["phage_embedding"] = pd.Series([torch.cat(embeds) for embeds in zip(*phage_embeddings)])
+    # result["phage_embedding"] = pd.Series([avg_tensors(embeds) for embeds in zip(*phage_embeddings)]) # Avg of the embeddings instead of concat
 
     logger.debug(f"Final embedding size (bacteria): {len(result['bacterium_embedding'].iloc[0])}")
     logger.debug(f"Final embedding size (phages): {len(result['phage_embedding'].iloc[0])}")
