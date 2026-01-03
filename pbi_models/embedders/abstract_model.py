@@ -43,6 +43,10 @@ class AbstractModel(ABC):
         # Only keep the first chunk if using TruncateStrategy. Bad practice, but much faster
         if self.merging_strategy.name() == "TruncateStrategy":
             sequences = [sequences[0]]
+        elif self.merging_strategy.name() == "BottomTruncateStrategy":
+            sequences = [sequences[-1]]
+        elif self.merging_strategy.name() == "TopBottomTruncateStrategy":
+            sequences = [sequences[0], sequences[-1]]
 
         # Get embeddings for each subsequence
         tokens = self._encode(sequences)
