@@ -5,7 +5,7 @@ input_perphect:
   couples_df: data/perphect-data/all-private-oversampled/couples_df.csv
 embeddings_dir: data/embeddings
 # embeddings_dir: data/embeddings-dummy
-output_dir: output/
+# output_dir: output/ # Comment line to disable output
 num_gpu: 0
 gpu_id: 3
 # torch_num_threads: 1
@@ -17,7 +17,7 @@ training_config:
   weight_decay: 0
   batch_size: 256
 
-  reduce_dimensionality: none
+  reduce_dimensionality: PCA
   n_components_bacteria: 500
   n_components_phages: 500
 
@@ -81,46 +81,46 @@ bacteria_embedding_models:
 # classifier: $CLASSIFIER
 
 # classifier: 
-#   name: CNNClassifier
+#   name: MLPClassifier
 #   params:
-#     bacterium_conv_params: "[(64, 3, 5), (32, 10, 5), (32, 10, 5)]"
-#     phage_conv_params: "[(64, 3, 5), (32, 10, 5)]"
+#     bacterium_mlp_sizes: [64]
+#     phage_mlp_sizes: [128, 64]
 #     dense_dim: 100
-#     dense_dropout: 0.5
+#     dropout: 0.2
 
 # classifier: 
-#   name: BasicCNNClassifier
+#   name: BasicMLPClassifier
 #   params:
-#     cnn_params: "[(128, 3, 5), (64, 10, 5), (32, 10, 5)]"
-#     dense_dim: 100
-#     dense_dropout: 0.5
+#     mlp_params: [512, 256, 128, 64]
+#     dropout: 0.2
 
 # classifier:
 #   name: LinearClassifier
 
-classifier:
-  name: BasicClassifier
+# classifier:
+#   name: BasicClassifier
 
 # classifier:
 #   name: SklearnClassifier
 #   params:
 #     sklearn_model_name: RandomForestClassifier
 #     sklearn_model_params:
-#       n_estimators: 1000
+#       n_estimators: 200
+#       max_features: null
 #       # max_leaves: 63
 #       # grow_policy: depthwise # depthwise lossguide
 #       # booster: gbtree # gbtree gblinear dart
 #       # tree_method: hist # exact approx hist
 #       # verbosity: 1
-#       n_jobs: -20
+#       n_jobs: -1
 
-# classifier:
-#   name: SklearnClassifier
-#   params:
-#     sklearn_model_name: MLPClassifier
-#     sklearn_model_params:
-#       hidden_layer_sizes: [512, 256, 128]
-#       activation: relu
-#       learning_rate_init: 0.0005
-#       batch_size: 256
-#       max_iter: 500 # epochs for adam solver
+classifier:
+  name: SklearnClassifier
+  params:
+    sklearn_model_name: LGBMClassifier
+    sklearn_model_params:
+      num_leaves: 63
+      n_estimators: 1000
+      max_bin: 512
+      force_col_wise: true
+      n_jobs: -1

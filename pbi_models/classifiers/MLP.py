@@ -162,3 +162,7 @@ class BasicMLPClassifier(MLPClassifier):
         x = self.fc2(x)
         # No softmax, return raw logits
         return x
+    
+    def __repr__(self) -> str:
+        return f"""MLPClassifier(mlp_params: {self.params}, dropout={self.dropout.p})"""
+    

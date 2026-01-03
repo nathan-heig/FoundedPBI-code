@@ -40,7 +40,7 @@ def create_embeddings_bacteria(bacteria_models: List[AbstractModel], bacteria_df
     # Create all the embeddings for one model and then save them all at once
     for bacteria_model in bacteria_models:
         if not bacteria_model.is_loaded():
-            logger.info(f"Skipping bacteria model {bacteria_model.name()} (use_cached_embeddings=True).")
+            logger.debug(f"Skipping bacteria model {bacteria_model.name()} (use_cached_embeddings=True).")
             continue
         logger.debug(f"Creating bacteria embeddings for model {bacteria_model.name()}...")
         bacteria_encoded[f"embedding_{bacteria_model.name()}"] = bacteria_df.progress_apply(lambda row: bacteria_model.embed(row["bacterium_sequence"]), axis=1) # type: ignore
@@ -58,7 +58,7 @@ def create_embeddings_phages(phages_models: List[AbstractModel], phages_df: pd.D
     # Create all the embeddings for one model and then save them all at once
     for phages_model in phages_models:
         if not phages_model.is_loaded():
-            logger.info(f"Skipping phage model {phages_model.name()} (use_cached_embeddings=True).")
+            logger.debug(f"Skipping phage model {phages_model.name()} (use_cached_embeddings=True).")
             continue
         logger.debug(f"Creating phage embeddings for model {phages_model.name()}...")
         phages_encoded[f"embedding_{phages_model.name()}"] = phages_df.progress_apply(lambda row: phages_model.embed(row["phage_sequence"]), axis=1) # type: ignore
@@ -107,7 +107,7 @@ def reduce_dimensionality(dataset: pd.DataFrame, technique: DIMENSIONALITY_REDUC
     def plot_exp_variance(exp_var, output_path: str, title: str = "PCA Explained Variance"):
         cum_sum = np.cumsum(exp_var)
 
-        _, ax = plt.subplots(figsize=(10, 6))
+        _, ax = plt.subplots(figsize=(8, 4))
         ax.step(range(1, len(cum_sum) + 1), cum_sum, where="mid", label="Cumulative explained variance")
 
         ax.set_ylabel("Explained variance")
@@ -472,8 +472,8 @@ if __name__ == "__main__":
         # Create train and test datasets
         bacteria_model_names = [x.name() for x in config.bacteria_embedding_models]
         phages_model_names = [x.name() for x in config.phages_embedding_models]
-        dataset = make_dataset(couples_df, bacteria_model_names, phages_model_names, output_manager, device)
 
+        dataset = make_dataset(couples_df, bacteria_model_names, phages_model_names, output_manager, device)
         dataset = reduce_dimensionality(dataset, config.training_config.reduce_dimensionality, config.output_dir, config.training_config.n_components_bacteria, config.training_config.n_components_phages)
         
         train, test = train_test_split(dataset, test_size=0.2, random_state=42, shuffle=True)

@@ -1,0 +1,39 @@
+input_perphect:
+  bacteria_df: data/perphect-data/all/bacteria_df.csv
+  phages_df: data/perphect-data/all/phages_df.csv
+  couples_df: data/perphect-data/all-private-oversampled/couples_df.csv
+embeddings_dir: data/embeddings
+num_gpu: 0
+gpu_id: 3
+# torch_num_threads: 1
+
+training_config:
+  epochs: 50
+  learning_rate: 1e-3
+  weight_decay: 0
+  batch_size: 256
+
+  k_folds_cv: 10
+
+phages_embedding_models:
+  - name: NT2
+    params: 
+      # model_name: nucleotide-transformer-v2-250m-multi-species
+      model_name: "./finetuning/model_weights/nt2-phages-lora-perphect/checkpoint-39500"
+      overlap: 0
+    strategy: TopBottomTruncateStrategy
+    use_cached_embeddings: false
+
+bacteria_embedding_models:
+  - name: NT2
+    params: 
+      model_name: nucleotide-transformer-v2-250m-multi-species
+      overlap: 0
+    strategy: TopBottomTruncateStrategy
+    use_cached_embeddings: false
+
+classifier: 
+  name: BasicMLPClassifier
+  params:
+    mlp_params: [256, 128]
+    dropout: 0.2

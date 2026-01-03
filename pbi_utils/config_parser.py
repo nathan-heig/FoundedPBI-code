@@ -64,7 +64,7 @@ class YAMLConfig(BaseModel):
     classifier: ClassifierConfig = Field(default_factory=lambda: ClassifierConfig(name="LinearClassifier", params={})) # Model to use to classify the embeddings. Must be a subclass of `AbstractClassifier`, implemented in `pbi_models.classifiers`
     torch_num_threads: int = -1 # Number of threads used by PyTorch. If -1, the maximum number of threads is used
     training_config: TrainingConfig
-    output_dir: str | None = None # Output folder. If none, do not output anything
+    output_dir: str | None = None # Output folder. If null, do not output anything
 
 class Config:
     def __init__(self, yaml_config: YAMLConfig, raw_dict):
