@@ -24,14 +24,14 @@ echo 0 > "$progress_file"
 # ===============================================
 # Parameter Grid
 # ===============================================
-declare -A param_grid=(
-  [NT2BACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
-  [MEGADNABACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
-  [DNABERTBACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
-  [NT2PHAGESTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
-  [MEGADNAPHAGESTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
-  [DNABERTPHAGESTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
-)
+# declare -A param_grid=(
+#   [NT2BACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+#   [MEGADNABACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+#   [DNABERTBACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+#   [NT2PHAGESTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+#   [MEGADNAPHAGESTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+#   [DNABERTPHAGESTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+# )
 
 #   [CLASSIFIER]='
 # {"name":"SklearnClassifier","params":{"sklearn_model_name":"LGBMClassifier","sklearn_model_params":{"n_estimators":350,"num_leaves":63,"n_jobs":1}}}
@@ -42,12 +42,11 @@ declare -A param_grid=(
 # {"name":"SklearnClassifier","params":{"sklearn_model_name":"XGBClassifier","sklearn_model_params":{"n_estimators":200,"tree_method":"hist","n_jobs":1}}}
 # '
 
-# declare -A param_grid=(
-#     [N_ESTIMATORS]="50 100 200 350"
-#     [NUM_LEAVES]="15 31 63 127"
-#     [BOOSTING_TYPE]="gbdt dart rf"
-#     [LEARNING_RATE]="0.01 0.1"
-# )
+declare -A param_grid=(
+    [LR]="1e-2 1e-3 1e-4"
+    [WD]="0 1e-5 1e-4 1e-3"
+    [DROPOUT]="0 0.1 0.2 0.3 0.4"
+)
 
 # ===============================================
 # Generate combinations
