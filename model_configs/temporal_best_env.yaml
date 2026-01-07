@@ -2,10 +2,11 @@
 input_perphect:
   bacteria_df: data/perphect-data/all/bacteria_df.csv
   phages_df: data/perphect-data/all/phages_df.csv
+  # couples_df: data/perphect-data/all-private-oversampled-one-bact/couples_df.csv
   couples_df: data/perphect-data/all-private-oversampled/couples_df.csv
 embeddings_dir: data/embeddings
 # embeddings_dir: data/embeddings-dummy
-# output_dir: output/ # Comment line to disable output
+output_dir: output/best_model/ # Comment line to disable output
 num_gpu: 0
 gpu_id: 3
 # torch_num_threads: 1

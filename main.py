@@ -477,6 +477,22 @@ if __name__ == "__main__":
         dataset = reduce_dimensionality(dataset, config.training_config.reduce_dimensionality, config.output_dir, config.training_config.n_components_bacteria, config.training_config.n_components_phages)
         
         train, test = train_test_split(dataset, test_size=0.2, random_state=42, shuffle=True)
+        
+        # TODO: Only for testing purposes, remove later
+        # dataset = dataset.sample(frac=1, random_state=42).reset_index(drop=True)
+        # Select 250 random phages for testing
+        # test_phag_ids = dataset["phage_id"].drop_duplicates().sample(n=250, random_state=25).to_list()
+        # train = dataset[~dataset["phage_id"].isin(test_phag_ids)].reset_index(drop=True)
+        # test = dataset[dataset["phage_id"].isin(test_phag_ids)].reset_index(drop=True)
+
+        # Select 50 random bacteria for testing
+        # test_bact_ids = dataset["bacterium_id"].drop_duplicates().sample(n=25, random_state=25).to_list()
+        # train = dataset[~dataset["bacterium_id"].isin(test_bact_ids)].reset_index(drop=True)
+        # test = dataset[dataset["bacterium_id"].isin(test_bact_ids)].reset_index(drop=True)
+
+
+        logger.info(f"Train dataset size: {len(train)}")
+        logger.info(f"Test dataset size: {len(test)}")
 
         stats = Stats(config)
 
@@ -495,16 +511,25 @@ if __name__ == "__main__":
 
         stats.update_train_results(cm, train_time)
 
-        # t = time.perf_counter()
-        # cm, _ = test_model(test, model, batch_size=config.batch_size, device=device)
-        # test_time = time.perf_counter() - t
+        t = time.perf_counter()
+        cm, _ = test_model(test, model, batch_size=config.training_config.batch_size, device=device)
+        test_time = time.perf_counter() - t
 
-        # stats.update_test_results(cm, test_time)
+        stats.update_test_results(cm, test_time)
 
         stats.log(logger.info)
 
+        # Save the trained model
+        if config.output_dir is not None:
+            os.makedirs(config.output_dir, exist_ok=True)
+            model_path = os.path.join(config.output_dir, "trained_model.pth")
+            if isinstance(model, nn.Module):
+                torch.save(model.state_dict(), model_path)
+                logger.info(f"Trained model saved to: {model_path}")
+            else:
+                # TODO: SklearnClassifier save method
+                logger.warning("Saving sklearn models currently not supported. Not saving the model.")
 
-
-
+            # TODO: Save stats to a file as well, and also the config file used for training
 
 

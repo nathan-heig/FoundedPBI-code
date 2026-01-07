@@ -124,7 +124,7 @@ class Config:
                 f")"
                 )
     
-def parse_config(config_path: str | None, json_cli: str | None) -> Config:
+def parse_config(config_path: str | None = None, json_cli: str | None = None) -> Config:
     if config_path is not None:
         with open(config_path, 'r') as f:
             config_dict = yaml.safe_load(os.path.expandvars(f.read())) # Read file replacing env vars with their value
