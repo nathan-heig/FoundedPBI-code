@@ -6,11 +6,11 @@ micromamba activate -n pbi
 # Settings
 # ===============================================
 repeats=1
-max_jobs=55
-csv_file=./gridsearch_merging_strategy_final.csv
+max_jobs=60
+csv_file=./gridsearch_hyperparameters.csv
 # Only -1 is working for now...
 random_samples=-1 # -1 For gridsearch
-config_file=./model_configs/all_env.yaml
+config_file=./model_configs/temporal_best_env.yaml
 
 
 # ===============================================
@@ -47,6 +47,13 @@ declare -A param_grid=(
     [WD]="0 1e-5 1e-4 1e-3"
     [DROPOUT]="0 0.1 0.2 0.3 0.4"
 )
+
+# Make numpy and sklearn use a single thread
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
 
 # ===============================================
 # Generate combinations

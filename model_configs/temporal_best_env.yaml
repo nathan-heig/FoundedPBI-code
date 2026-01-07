@@ -92,7 +92,7 @@ classifier:
   name: BasicMLPClassifier
   params:
     mlp_params: [256, 128]
-    dropout: 0.3
+    dropout: 0.4
 
 # classifier:
 #   name: LinearClassifier
