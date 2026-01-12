@@ -28,8 +28,8 @@ pbi/
 │   ├── classifiers/ # Classifiers implementation.
 │   │   ├── abstract_classifier.py # Abstract classifier class. All the others should inherit from this class, to provide a stable API.
 │   │   ├── base.py # Dummy basic classifier, based on an MLP with 1 hidden layer.
-│   │   ├── CNN.py # CNN classifiers implementation. Provides BranchCNN and BasicCNN.
-│   │   ├── MLP.py # MLP classifiers implementation. Provides BranchMLP and BasicMLP.
+│   │   ├── CNN.py # CNN classifiers implementation. Provides CNNClassifier and BasicCNNClassifier.
+│   │   ├── MLP.py # MLP classifiers implementation. Provides MLPClassifier and BasicMLPClassifier.
 │   │   ├── linear.py # Linear classifier. Provides LinearClassifier.
 │   │   └── sklearn_classifier. # Sci-kit learn classifiers. Can use any sklearn classifiers with the addition of LightGBM and XGBoost.
 │   └── embedders/ # Embedding models implementation.

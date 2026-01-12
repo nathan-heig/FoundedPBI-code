@@ -1,79 +1,20 @@
-input_perphect: $TEST
-# input_perphect:
-#   bacteria_df: data/perphect-data/all/bacteria_df.csv
-#   phages_df: data/perphect-data/all/phages_df.csv
-#   couples_df: data/perphect-data/all-private-undersampled/couples_df.csv
-# embeddings_dir: data/embeddings
-embeddings_dir: data/embeddings-dummy
+input_perphect: data/perphect-data/private_data_set
 num_gpu: 1
 gpu_id: 3
-# use_cached_embeddings: true
 
 phages_embedding_models:
-  - name: DNABERT2
-    params: 
-      source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
-      max_seq_len: 32768
-      overlap: 0
-    strategy:
-      name: TKPertStrategy
-      params:
-        merging_strategy: concat
-
   - name: NT2
     params: 
-      model_name: nucleotide-transformer-v2-50m-multi-species
-      overlap: 0
-    strategy: TruncateStrategy
-    # strategy: AverageStrategy
-    # strategy: MaxStrategy
-    # strategy: TfidfStrategy
-    # strategy: Tf4idfStrategy
-  #   strategy:
-  #     name: TKPertStrategy
-  #     params:
-  #       merging_strategy: concat
-  #   strategy:
-  #     name: TKPertStrategy
-  #     params:
-  #       merging_strategy: avg
-
-  - name: MegaDNA
-    params: 
-      weights_path: data/weights/megaDNA_phage_145M.pt
-      get_layer: concat
-      overlap: 0
-    strategy:
-      name: TKPertStrategy
-      params:
-        merging_strategy: concat
+      model_name: nucleotide-transformer-v2-250m-multi-species
+    strategy: TopBottomTruncateStrategy
+    use_cached_embeddings: auto
 
 bacteria_embedding_models:
-  # - name: DNABERT2
-  #   params: 
-  #     source_code_path: foundation-models-test/DNABERT-2/DNABERT-2-117M/
-  #     max_seq_len: 32768
-  #     overlap: 0
-  #   strategy:
-  #     name: TKPertStrategy
-  #     params:
-  #       merging_strategy: concat
-
   - name: NT2
     params: 
-      model_name: nucleotide-transformer-v2-50m-multi-species
-      overlap: 0
-    strategy:
-      name: TKPertStrategy
-      params:
-        merging_strategy: concat
+      model_name: nucleotide-transformer-v2-250m-multi-species
+    strategy: TopBottomTruncateStrategy
+    use_cached_embeddings: auto
 
-  # - name: MegaDNA
-  #   params: 
-  #     weights_path: data/weights/megaDNA_phage_145M.pt
-  #     get_layer: concat
-  #     overlap: 0
-  #   strategy:
-  #     name: TKPertStrategy
-  #     params:
-  #       merging_strategy: concat
+classifier:
+  name: LinearClassifier

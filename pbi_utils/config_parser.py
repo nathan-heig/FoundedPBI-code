@@ -135,7 +135,7 @@ class YAMLConfig(BaseModel):
 
     input_perphect: str | InputConfig
     embeddings_dir: str = "data/embeddings"
-    num_gpu: int = 1
+    num_gpu: int = 0
     gpu_id: int = 0
     phages_embedding_models: List[ModelConfig] = Field(default_factory=list)
     bacteria_embedding_models: List[ModelConfig] = Field(default_factory=list)
