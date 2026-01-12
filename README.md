@@ -12,6 +12,52 @@ Every part of the architecture is configurable, by passing a YAML configuration 
 
 ## Repository structure
 
+```shell
+pbi/
+├── README.md # This file.
+├── analysis/ # Jupyter notebooks to perform different analysis. See the <Utilities> section.
+├── data/ # This folder is not included in the repository. You should create it and add all the data inside.
+├── doc/ # Extra documentation for developers, showing the specific details for all the code.
+├── finetune_nt2.py # Finetuning script for the Nucleotide Transformer v2. See `run_finetune_nt2.sh` file for an example, or run `python finetune_nt2.py --help` to see all the possible parameters.
+├── main.py # Main entrypoint for the framework. See the <Execution> section.
+├── model_configs/ # YAML configuration files provided as an example. They are used to define all the parameters for each run.
+│   ├── example.yaml # Example config with details on all the possible parameters.
+│   ├── base.yaml # Basic execution config to use as test.
+│   └── best_model.yaml # Best configuration found during the project.
+├── pbi_models/ # Implementation of the different classifiers and embedding models.
+│   ├── classifiers/ # Classifiers implementation.
+│   │   ├── abstract_classifier.py # Abstract classifier class. All the others should inherit from this class, to provide a stable API.
+│   │   ├── base.py # Dummy basic classifier, based on an MLP with 1 hidden layer.
+│   │   ├── CNN.py # CNN classifiers implementation. Provides BranchCNN and BasicCNN.
+│   │   ├── MLP.py # MLP classifiers implementation. Provides BranchMLP and BasicMLP.
+│   │   ├── linear.py # Linear classifier. Provides LinearClassifier.
+│   │   └── sklearn_classifier. # Sci-kit learn classifiers. Can use any sklearn classifiers with the addition of LightGBM and XGBoost.
+│   └── embedders/ # Embedding models implementation.
+│       ├── abstract_model.py # Abstract embedder class. All the others should inherit from this class, to provide a stable API.
+│       ├── dnabert2.py # DNABERT2 model implementation. Provides the DNABERT2 class.
+│       ├── evo.py # EVO1 model implementation. It is not recommended to use, as it can only deal with sequences of up to 512bp. Use at your own risk. Provides the EVO class.
+│       ├── megaDNA.py # MegaDNA model implementation. Provides the MegaDNA class.
+│       └── nucleotide_transformer_v2.py # Nucleotide Transformer v2 model implementation. Provides the NT2 class.
+├── pbi_utils/ # Additional utilities implementation for the project.
+│   ├── embeddings_merging_strategies/ # Implementation of the different merging strategies.
+│   │   ├── abstract_merger_strategy.py # Abstract merging class. All the others should inherit from this one to provide a stable API.
+│   │   ├── average_strategy.py # Provides the AverageStrategy class.
+│   │   ├── max_strategy.py # Provides the MaxStrategy class.
+│   │   ├── tfidf_strategy.py # Provides the TfidfStrategy and the Tf4idfStrategy classes.
+│   │   ├── tkpert_strategy.py # Provides the TKPertStrategy class.
+│   │   └── truncate_strategy.py # Provides the TruncateStrategy, BottomTruncateStrategy and TopBottomTruncateStrategy.
+│   ├── config_parser.py # Responsible of dealing with the input. Defines all the input parameters and reads them.
+│   ├── data_manager.py # Responsible of dealing with reading and storing the DNA data and embeddings.
+│   ├── logging.py # Logging system implementation used for the project.
+│   ├── types.py # Defines some types that are used in multiple files.
+│   └── utils.py # Provides extra utility functions and classes, such a Stats class.
+├── requirements.txt # Base requirements file.
+├── requirements_nt2_finetuning.txt # Requirements file for finetuning the Nucleotide Transformer v2.
+├── run.sh # Basic execution example.
+├── run_finetune_nt2.sh # Finetuning example.
+└── run_gridsearch.sh # Script to perform gridsearch over some user-defined environment variables.
+```
+
 ## Environment
 
 Each of the foundation models requires an specific version of libraries, so it is much recommended to set up a Python package manager such as conda or micromamba. In this guide, micromamba with an alias to `mm` is used. If using conda instead, just replace `mm` with `conda`.
@@ -91,7 +137,7 @@ Some bash scripts are also provided to help with specific needs.
 - [run_gridsearch.sh](run_gridsearch.sh): Performs a gridsearch over different parameters that can be customized at the start of the file. The intended use is to use environment variables inside the config file (by using `$<env_var>` as a value), and change them inside the script.
 - [run_finetune_nt2.sh](run_finetune_nt2.sh): Shows an example of finetuning the Nucleotide Transformer v2.
 
-Additionally, some jupyter notebooks are also provided, that perform different analysis on the data and models. They are available inside the `analysis/` folder.
+Additionally, some Jupyter notebooks are also provided, that perform different analysis on the data and models. They are available inside the `analysis/` folder.
 - [data_analysis.ipynb](analysis/data_analysis.ipynb): Explores the public and private datasets, and creates one that joins them. It also plots the embeddings from DNABERT2 in a 2D grid to visualize them.
 - [embeddings_merging_strategies_analysis.ipynb](analysis/embeddings_merging_strategies_analysis.ipynb): Analyzes the results from the gridsearch over merging strategies, and creates plots to compare them.
 - [model_testing.ipynb](analysis/model_testing.ipynb): Explores the results from a trained model, testing it with different datasets and analyzing the predictions.

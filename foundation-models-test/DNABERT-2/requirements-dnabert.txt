@@ -1,7 +1,0 @@
-transformers==4.42.3
-tensorflow==2.15.0
-torch==2.1.2
-einops
-pandas
-ipykernel
-ipywidgets
