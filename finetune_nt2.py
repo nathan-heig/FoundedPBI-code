@@ -34,7 +34,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning_rate", type=float, default=5e-5, help="Learning rate for training")
     parser.add_argument("--no_use_bf16", action="store_true", default=False, help="Disable bf16 training, use fp16 instead")
     parser.add_argument("--epochs", type=int, default=10, help="Number of training epochs")
-    parser.add_argument("--resume_from_checkpoint", action="store_true", default=False, help="Resume training from the last checkpoint")
 
     cli_args = parser.parse_args()
 
@@ -45,13 +44,14 @@ def parse_args() -> argparse.Namespace:
     if cli_args.output_plots_dir == "auto":
         cli_args.output_plots_dir = os.path.join(cli_args.output_model_dir, cli_args.output_model_name, "plots")
 
+    if cli_args.model_type != "nt2":
+        logger.warning(f"For now, only 'nt2' model type is fully supported. You selected '{cli_args.model_type}'. The execution will probably fail.")
+
     # Log CLI arguments
     logger.debug("CLI Arguments:")
     for arg, value in vars(cli_args).items():
         logger.debug(f"  {arg}: {value}")
     
-
-
     return cli_args
 
 def config_environment(cli_args: argparse.Namespace):
@@ -68,6 +68,7 @@ def get_last_checkpoint(output_dir: str) -> str | None:
     return last_checkpoint
 
 def load_transformers_model_nt2(cli_args: argparse.Namespace):
+    # Resume from checkpoint does not work properly
     # if cli_args.resume_from_checkpoint:
     #     # Find last checkpoint
     #     last_checkpoint = get_last_checkpoint(os.path.join(cli_args.output_model_dir, cli_args.output_model_name))
@@ -207,7 +208,8 @@ if __name__ == "__main__":
     results = trainer.evaluate()
     logger.info(f"Initial Perplexity: {math.exp(results['eval_loss']):.2f}")
 
-    trainer.train(resume_from_checkpoint=cli_args.resume_from_checkpoint)
+    # The resume_from_checkpoint functionality does not work properly. An alternative could be to use the finetuned model as the base model and restart training.
+    trainer.train()
 
     results = trainer.evaluate()
     logger.info(f"Final Perplexity: {math.exp(results['eval_loss']):.2f}")

@@ -13,3 +13,6 @@ pip install flash-attn==2.8.0.post2 --no-build-isolation
 pip install evo2
 pip install ipykernel ipywidgets
 ```
+
+## EVO
+The EVO2 model can only be run on H100 and H200 GPUs, so we cannot use it. See [here](https://docs.nvidia.com/nim/bionemo/evo2/latest/prerequisites.html) for the hardware requirements.

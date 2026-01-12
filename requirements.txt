@@ -12,8 +12,9 @@ imbalanced-learn
 pydantic
 lightgbm
 xgboost
+ipykernel
+ipywidgets
 
 git+https://github.com/lingxusb/megaDNA@main
 
 transformers==4.42.3
-peft==0.10.0

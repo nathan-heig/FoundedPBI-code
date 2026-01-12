@@ -7,10 +7,10 @@ micromamba activate -n pbi
 # ===============================================
 repeats=1
 max_jobs=60
-csv_file=./gridsearch_hyperparameters.csv
+csv_file=./gridsearch_1.csv
 # Only -1 is working for now...
 random_samples=-1 # -1 For gridsearch
-config_file=./model_configs/temporal_best_env.yaml
+config_file=./model_configs/env_var_example.yaml
 
 
 # ===============================================
@@ -24,6 +24,15 @@ echo 0 > "$progress_file"
 # ===============================================
 # Parameter Grid
 # ===============================================
+
+# Environment variables that will be explored
+# Each key maps to a list of possible values (space-separated)
+declare -A param_grid=(
+    [LR]="1e-2 1e-3 1e-4"
+    [WD]="0 1e-5 1e-4 1e-3"
+    [DROPOUT]="0 0.1 0.2 0.3 0.4"
+)
+
 # declare -A param_grid=(
 #   [NT2BACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
 #   [MEGADNABACTSTRAT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
@@ -42,11 +51,6 @@ echo 0 > "$progress_file"
 # {"name":"SklearnClassifier","params":{"sklearn_model_name":"XGBClassifier","sklearn_model_params":{"n_estimators":200,"tree_method":"hist","n_jobs":1}}}
 # '
 
-declare -A param_grid=(
-    [LR]="1e-2 1e-3 1e-4"
-    [WD]="0 1e-5 1e-4 1e-3"
-    [DROPOUT]="0 0.1 0.2 0.3 0.4"
-)
 
 # Make numpy and sklearn use a single thread
 export OMP_NUM_THREADS=1

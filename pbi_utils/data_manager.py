@@ -22,11 +22,11 @@ class EmbeddingsManager(ABC):
         pass
 
     @abstractmethod
-    def save_embeddings_batch(self, ids: List[int], embeddings: List[torch.Tensor], model_name:str, overwrite: bool = False) -> None:
+    def save_embeddings_batch(self, ids: List[int], embeddings: List[torch.Tensor], model_name:str, overwrite: bool = False, silent: bool = False) -> None:
         pass
 
     @abstractmethod
-    def load_embedding_batch(self, ids: List[int], model_name:str, remove: bool = False, device: str = "cpu") -> List[torch.Tensor]:
+    def load_embedding_batch(self, ids: List[int], model_name:str, remove: bool = False, device: str = "cpu", silent: bool = False) -> List[torch.Tensor]:
         pass
 
     @abstractmethod
@@ -52,14 +52,14 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
                 self.remove_key(id, model_name, ignore_not_found=True)
                 f.create_dataset(id, data=data, compression="gzip")
     
-    def save_embeddings_batch(self, ids: List[int], embeddings: List[torch.Tensor], model_name: str, overwrite: bool = False):
+    def save_embeddings_batch(self, ids: List[int], embeddings: List[torch.Tensor], model_name: str, overwrite: bool = False, silent: bool = False):
         emb_shape = embeddings[0].shape
         eq_shape = list(map(lambda x: x.shape == emb_shape, embeddings))
         all_eq_shape = np.all(eq_shape)
 
         logger.debug(f"Saving {len(ids)} embeddings for model {model_name} to {self.base_path}. " + f"Shape: {emb_shape}" if all_eq_shape else f"Found different shapes at position 0 ({emb_shape}) and {eq_shape.index(False)} ({embeddings[eq_shape.index(False)].shape})")
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "a") as f:
-            for id, embedding in tqdm(zip(ids, embeddings), total=len(ids), desc="Saving embeddings"):
+            for id, embedding in tqdm(zip(ids, embeddings), total=len(ids), desc="Saving embeddings", disable=silent):
                 id = str(id) # type: ignore
                 # ensure CPU + numpy
                 data = embedding.detach().cpu().float().numpy()
@@ -82,11 +82,11 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
 
         return embed
     
-    def load_embedding_batch(self, ids: List[int], model_name: str, remove: bool = False, device: str = "cpu") -> List[torch.Tensor]:
+    def load_embedding_batch(self, ids: List[int], model_name: str, remove: bool = False, device: str = "cpu", silent: bool = False) -> List[torch.Tensor]:
         logger.debug(f"Loading {len(ids)} embeddings for model {model_name} from {self.base_path}")
         result = []
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "r") as f:
-            for id in tqdm(ids, desc="Loading embeddings"):
+            for id in tqdm(ids, desc="Loading embeddings", disable=silent):
                 id = str(id) # type: ignore
                 if id not in f:
                     print(f"{id} not found")

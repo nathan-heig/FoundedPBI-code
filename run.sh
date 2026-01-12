@@ -3,4 +3,4 @@
 
 micromamba activate -n pbi
 
-python main.py -c model_configs/test.yaml
+python main.py -c model_configs/base.yaml
