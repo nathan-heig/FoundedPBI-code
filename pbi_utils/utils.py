@@ -11,13 +11,15 @@ def clean_gpu():
     torch.cuda.empty_cache()
     gc.collect()
 
+
 class Stats:
     """
     Class to store training and testing statistics
     """
+
     def __init__(self, args) -> None:
         self.args = args
-        self.test_cm = None # CM always in the form (TN, FP, FN, TP)
+        self.test_cm = None  # CM always in the form (TN, FP, FN, TP)
         self.train_cm = None
         self.classifier = None
         self.train_time = None
@@ -30,14 +32,14 @@ class Stats:
     def update_train_results(self, cm: np.ndarray, train_time):
         self.train_cm = cm
         self.train_time = train_time
-    
+
     def update_classifier(self, classifier: nn.Module):
         self.classifier = classifier
 
     def log(self, logger):
         """
         Log the statistics using the provided logger, in a the required format to copy it to a google sheet.
-        
+
         :param logger: Logger instance to use for logging, i.e., logger.info
         """
 
@@ -54,19 +56,59 @@ class Stats:
             self.classifier.name() if self.classifier is not None else "",
             f"{self.args.training_config.epochs}",
             f"{self.args.training_config.batch_size}",
-            f"{self.args.training_config.learning_rate:.4e}".replace(".",","),
-            f"{self.train_time:.2f}".replace(".",",") if self.train_time is not None else "",
-            f"{self.train_cm[1][1]:.2f}".replace(".",",") if self.train_cm is not None else "",
-            f"{self.train_cm[0][1]:.2f}".replace(".",",") if self.train_cm is not None else "",
-            f"{self.train_cm[1][0]:.2f}".replace(".",",") if self.train_cm is not None else "",
-            f"{self.train_cm[0][0]:.2f}".replace(".",",") if self.train_cm is not None else "",
+            f"{self.args.training_config.learning_rate:.4e}".replace(".", ","),
+            (
+                f"{self.train_time:.2f}".replace(".", ",")
+                if self.train_time is not None
+                else ""
+            ),
+            (
+                f"{self.train_cm[1][1]:.2f}".replace(".", ",")
+                if self.train_cm is not None
+                else ""
+            ),
+            (
+                f"{self.train_cm[0][1]:.2f}".replace(".", ",")
+                if self.train_cm is not None
+                else ""
+            ),
+            (
+                f"{self.train_cm[1][0]:.2f}".replace(".", ",")
+                if self.train_cm is not None
+                else ""
+            ),
+            (
+                f"{self.train_cm[0][0]:.2f}".replace(".", ",")
+                if self.train_cm is not None
+                else ""
+            ),
             "",
             "",
             "",
-            f"{self.test_time:.2f}".replace(".",",") if self.test_time is not None else "",
-            f"{self.test_cm[1][1]:.2f}".replace(".",",") if self.test_cm is not None else "",
-            f"{self.test_cm[0][1]:.2f}".replace(".",",") if self.test_cm is not None else "",
-            f"{self.test_cm[1][0]:.2f}".replace(".",",") if self.test_cm is not None else "",
-            f"{self.test_cm[0][0]:.2f}".replace(".",",") if self.test_cm is not None else "",
+            (
+                f"{self.test_time:.2f}".replace(".", ",")
+                if self.test_time is not None
+                else ""
+            ),
+            (
+                f"{self.test_cm[1][1]:.2f}".replace(".", ",")
+                if self.test_cm is not None
+                else ""
+            ),
+            (
+                f"{self.test_cm[0][1]:.2f}".replace(".", ",")
+                if self.test_cm is not None
+                else ""
+            ),
+            (
+                f"{self.test_cm[1][0]:.2f}".replace(".", ",")
+                if self.test_cm is not None
+                else ""
+            ),
+            (
+                f"{self.test_cm[0][0]:.2f}".replace(".", ",")
+                if self.test_cm is not None
+                else ""
+            ),
         ]
-        logger("\n"+"\t".join(data))
+        logger("\n" + "\t".join(data))

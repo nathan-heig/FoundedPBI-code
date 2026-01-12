@@ -2,7 +2,9 @@ import importlib
 import inspect
 import os
 
-from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
+from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import (
+    AbstractMergerStrategy,
+)
 
 
 # Dynamically import all the strategies in this folder, so they are available when importing the package
@@ -12,7 +14,10 @@ __all__ = []
 dirname = os.path.dirname(os.path.abspath(__file__))
 
 for filename in os.listdir(dirname):
-    if not filename.endswith(".py") or filename in {"__init__.py", "abstract_merger_strategy.py"}:
+    if not filename.endswith(".py") or filename in {
+        "__init__.py",
+        "abstract_merger_strategy.py",
+    }:
         continue
 
     module_name = filename[:-3]
@@ -20,7 +25,10 @@ for filename in os.listdir(dirname):
 
     # Inspect each module for subclasses of BaseStrategy
     for name, obj in inspect.getmembers(module, inspect.isclass):
-        if issubclass(obj, AbstractMergerStrategy) and obj is not AbstractMergerStrategy:
+        if (
+            issubclass(obj, AbstractMergerStrategy)
+            and obj is not AbstractMergerStrategy
+        ):
             # Inject class directly into this package’s namespace
             globals()[name] = obj
-            __all__.append(name) # type: ignore
+            __all__.append(name)  # type: ignore

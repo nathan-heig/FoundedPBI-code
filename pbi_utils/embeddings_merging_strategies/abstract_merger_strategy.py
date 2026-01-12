@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 import torch
 
+
 class AbstractMergerStrategy(ABC):
     """
     Abstract class for merging strategies of embeddings. All merging strategies should inherit from this class and implement the merge method.
     """
 
     @abstractmethod
-    def merge(self, sentences: list[str], embeddings: torch.Tensor)-> torch.Tensor:
+    def merge(self, sentences: list[str], embeddings: torch.Tensor) -> torch.Tensor:
         """Merge embeddings of sentences into a single embedding.
         Arguments:
             sentences (list[str]): List of sentences (splitted dna chunks).

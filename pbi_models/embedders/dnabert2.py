@@ -1,6 +1,8 @@
 from pbi_models.embedders.abstract_model import AbstractModel
 import torch
-from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
+from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import (
+    AbstractMergerStrategy,
+)
 from pbi_utils.logging import Logging, logging
 from pbi_utils.utils import clean_gpu
 from transformers import AutoTokenizer, AutoModel
@@ -8,8 +10,17 @@ from transformers.models.bert.configuration_bert import BertConfig
 
 logger = Logging()
 
+
 class DNABERT2(AbstractModel):
-    def __init__(self, merging_strategy: AbstractMergerStrategy, source_code_path: str, device: str = "cpu", overlap: int = 0, max_seq_len: int = 2**15, load_model: bool = True) -> None:
+    def __init__(
+        self,
+        merging_strategy: AbstractMergerStrategy,
+        source_code_path: str,
+        device: str = "cpu",
+        overlap: int = 0,
+        max_seq_len: int = 2**15,
+        load_model: bool = True,
+    ) -> None:
 
         self.load_model = load_model
         self.batch_size = 1
@@ -17,18 +28,22 @@ class DNABERT2(AbstractModel):
         self.device = device
         self.merging_strategy = merging_strategy
         self.overlap = int(overlap)
-        
+
         if self.load_model:
             # Not show internal transformers logging messages
             current_log_level = logging.root.level
             Logging.set_logging_level()
 
-            self.tokenizer = AutoTokenizer.from_pretrained(source_code_path, trust_remote_code=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                source_code_path, trust_remote_code=True
+            )
             config = BertConfig.from_pretrained(source_code_path)
-            self.model = AutoModel.from_pretrained(source_code_path, trust_remote_code=True, config=config)
+            self.model = AutoModel.from_pretrained(
+                source_code_path, trust_remote_code=True, config=config
+            )
 
             Logging.set_logging_level(current_log_level)
-            
+
             self.model.to(self.device)
             self.model.eval()
 
@@ -39,7 +54,7 @@ class DNABERT2(AbstractModel):
     def _compute_single_embedding(self, tokens: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             # Compute the embeddings
-            output = self.model(tokens)[0] # [1, sequence_length, 768]
+            output = self.model(tokens)[0]  # [1, sequence_length, 768]
 
         # embedding with mean pooling
         mean_embed = torch.mean(output[0], dim=0)
@@ -49,11 +64,13 @@ class DNABERT2(AbstractModel):
 
         return mean_embed
 
-    def _encode(self, dna_sequence: list[str]) -> torch.Tensor:        
-        return self.tokenizer.batch_encode_plus(dna_sequence, return_tensors = 'pt', padding=True)["input_ids"].to(self.device)
-    
+    def _encode(self, dna_sequence: list[str]) -> torch.Tensor:
+        return self.tokenizer.batch_encode_plus(
+            dna_sequence, return_tensors="pt", padding=True
+        )["input_ids"].to(self.device)
+
     def name(self) -> str:
         return f"DNABERT2-{self.merging_strategy.name()}-ov{self.overlap}-maxlen{self.max_seq_len}"
-    
+
     def __repr__(self):
         return f"DNABERT2(merging_strategy={self.merging_strategy}, overlap={self.overlap}, max_seq_len={self.max_seq_len})"

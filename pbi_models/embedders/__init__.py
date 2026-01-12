@@ -22,4 +22,4 @@ for filename in os.listdir(dirname):
         if issubclass(obj, AbstractModel) and obj is not AbstractModel:
             # Inject class directly into this package’s namespace
             globals()[name] = obj
-            __all__.append(name) # type: ignore
+            __all__.append(name)  # type: ignore

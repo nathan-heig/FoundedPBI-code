@@ -1,5 +1,8 @@
-from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
+from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import (
+    AbstractMergerStrategy,
+)
 import torch
+
 
 class AverageStrategy(AbstractMergerStrategy):
     """

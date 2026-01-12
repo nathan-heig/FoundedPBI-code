@@ -6,10 +6,11 @@ from abc import ABC, abstractmethod
 
 logger = Logging()
 
+
 class AbstractNNClassifier(nn.Module, ABC):
     """
     Abstract base class for classifiers based on pytorch. All classifiers should inherit from this class and implement the forward method.
-    
+
     **Note:** By default, the CrossEntropyLoss already applies Softmax internally, so the model must output raw logits (directly from the last layer). If not, it can cause instabilities and can cause numerical issues.
     """
 
@@ -27,7 +28,7 @@ class AbstractNNClassifier(nn.Module, ABC):
             logits: [batch, num_classes]
         """
         pass
-    
+
     def reset_model(self, device: str):
         def reset_weights(model: nn.Module):
             """
@@ -37,7 +38,7 @@ class AbstractNNClassifier(nn.Module, ABC):
             """
             for child in model.children():
                 # If the layer has reset_parameters, call it
-                if hasattr(child, 'reset_parameters'):
+                if hasattr(child, "reset_parameters"):
                     child.reset_parameters()
                 else:
                     # Recursively reset nested children
@@ -46,9 +47,9 @@ class AbstractNNClassifier(nn.Module, ABC):
         # Reset model for each fold
         reset_weights(self)
         self.to(device)
-    
+
     def name(self) -> str:
         return f"{type(self).__name__}"
-    
+
     def __repr__(self):
         return f"{type(self).__name__}()"

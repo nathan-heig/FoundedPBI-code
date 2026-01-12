@@ -12,16 +12,19 @@ from pbi_utils.logging import Logging
 
 logger = Logging()
 
+
 class EmbeddingsManager(ABC):
     """
     Abstract class for embeddings storage managers. For now, only H5py is implemented, but other storage backends can be added by extending this class.
     """
 
     @abstractmethod
-    def save_embedding(self, id: int, embedding: torch.Tensor, model_name:str, overwrite: bool = False) -> None:
+    def save_embedding(
+        self, id: int, embedding: torch.Tensor, model_name: str, overwrite: bool = False
+    ) -> None:
         """
         Save a single embedding.
-        
+
         :param id: The identifier for the embedding.
         :type id: int
         :param embedding: The embedding tensor to be saved.
@@ -34,10 +37,12 @@ class EmbeddingsManager(ABC):
         pass
 
     @abstractmethod
-    def load_embedding(self, id: int, model_name:str, remove: bool = False, device: str = "cpu") -> torch.Tensor | None:
+    def load_embedding(
+        self, id: int, model_name: str, remove: bool = False, device: str = "cpu"
+    ) -> torch.Tensor | None:
         """
         Load a single embedding.
-        
+
         :param id: The identifier for the embedding.
         :type id: int
         :param model_name: The name of the model associated with the embedding. Used to locate the correct storage.
@@ -52,10 +57,17 @@ class EmbeddingsManager(ABC):
         pass
 
     @abstractmethod
-    def save_embeddings_batch(self, ids: List[int], embeddings: List[torch.Tensor], model_name:str, overwrite: bool = False, silent: bool = False) -> None:
+    def save_embeddings_batch(
+        self,
+        ids: List[int],
+        embeddings: List[torch.Tensor],
+        model_name: str,
+        overwrite: bool = False,
+        silent: bool = False,
+    ) -> None:
         """
         Save a batch of embeddings.
-        
+
         :param ids: The list of identifiers for the embeddings.
         :type ids: List[int]
         :param embeddings: The list of embedding tensors to be saved.
@@ -70,10 +82,17 @@ class EmbeddingsManager(ABC):
         pass
 
     @abstractmethod
-    def load_embedding_batch(self, ids: List[int], model_name:str, remove: bool = False, device: str = "cpu", silent: bool = False) -> List[torch.Tensor]:
+    def load_embedding_batch(
+        self,
+        ids: List[int],
+        model_name: str,
+        remove: bool = False,
+        device: str = "cpu",
+        silent: bool = False,
+    ) -> List[torch.Tensor]:
         """
         Load a batch of embeddings.
-        
+
         :param ids: The list of identifiers for the embeddings.
         :type ids: List[int]
         :param model_name: The name of the model associated with the embeddings. Used to locate the correct storage.
@@ -90,10 +109,12 @@ class EmbeddingsManager(ABC):
         pass
 
     @abstractmethod
-    def remove_key(self, id: int | str, model_name:str, ignore_not_found: bool) -> None:
+    def remove_key(
+        self, id: int | str, model_name: str, ignore_not_found: bool
+    ) -> None:
         """
         Remove a specific embedding from storage.
-        
+
         :param id: The identifier for the embedding.
         :type id: int | str
         :param model_name: The name of the model associated with the embedding. Used to locate the correct storage.
@@ -104,10 +125,10 @@ class EmbeddingsManager(ABC):
         pass
 
     @abstractmethod
-    def has_key(self, id: int, model_name:str) -> bool:
+    def has_key(self, id: int, model_name: str) -> bool:
         """
         Check if a specific embedding exists in storage.
-        
+
         :param id: The identifier for the embedding.
         :type id: int
         :param model_name: The name of the model associated with the embedding. Used to locate the correct storage.
@@ -117,84 +138,123 @@ class EmbeddingsManager(ABC):
         """
         pass
 
+
 class H5pyEmbeddingsManager(EmbeddingsManager):
     """
     Embeddings manager that uses H5py files for storage. Each model's embeddings are stored in a separate H5 file within the specified base path.
     """
+
     def __init__(self, base_path: str) -> None:
         self.base_path = base_path
         os.makedirs(base_path, exist_ok=True)
         logger.info(f"Embeddings will be stored or read from {base_path}")
-    
-    def save_embedding(self, id: int, embedding: torch.Tensor, model_name: str, overwrite: bool = False):
-        id = str(id) # type: ignore
+
+    def save_embedding(
+        self, id: int, embedding: torch.Tensor, model_name: str, overwrite: bool = False
+    ):
+        id = str(id)  # type: ignore
 
         # ensure CPU + numpy
         data = embedding.detach().cpu().float().numpy()
 
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "a") as f:
             if not overwrite and id in f:
-                logger.debug(f"{id} already exists, skipping it. To overwrite the value, use overwrite=True")
+                logger.debug(
+                    f"{id} already exists, skipping it. To overwrite the value, use overwrite=True"
+                )
             else:
                 self.remove_key(id, model_name, ignore_not_found=True)
                 f.create_dataset(id, data=data, compression="gzip")
-    
-    def save_embeddings_batch(self, ids: List[int], embeddings: List[torch.Tensor], model_name: str, overwrite: bool = False, silent: bool = False):
+
+    def save_embeddings_batch(
+        self,
+        ids: List[int],
+        embeddings: List[torch.Tensor],
+        model_name: str,
+        overwrite: bool = False,
+        silent: bool = False,
+    ):
         emb_shape = embeddings[0].shape
         eq_shape = list(map(lambda x: x.shape == emb_shape, embeddings))
         all_eq_shape = np.all(eq_shape)
 
-        logger.debug(f"Saving {len(ids)} embeddings for model {model_name} to {self.base_path}. " + f"Shape: {emb_shape}" if all_eq_shape else f"Found different shapes at position 0 ({emb_shape}) and {eq_shape.index(False)} ({embeddings[eq_shape.index(False)].shape})")
+        logger.debug(
+            f"Saving {len(ids)} embeddings for model {model_name} to {self.base_path}. "
+            + f"Shape: {emb_shape}"
+            if all_eq_shape
+            else f"Found different shapes at position 0 ({emb_shape}) and {eq_shape.index(False)} ({embeddings[eq_shape.index(False)].shape})"
+        )
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "a") as f:
-            for id, embedding in tqdm(zip(ids, embeddings), total=len(ids), desc="Saving embeddings", disable=silent):
-                id = str(id) # type: ignore
+            for id, embedding in tqdm(
+                zip(ids, embeddings),
+                total=len(ids),
+                desc="Saving embeddings",
+                disable=silent,
+            ):
+                id = str(id)  # type: ignore
                 # ensure CPU + numpy
                 data = embedding.detach().cpu().float().numpy()
                 if not overwrite and id in f:
-                    logger.debug(f"{id} already exists, skipping it. To overwrite the value, use overwrite=True")
+                    logger.debug(
+                        f"{id} already exists, skipping it. To overwrite the value, use overwrite=True"
+                    )
                 else:
                     self.remove_key(id, model_name, ignore_not_found=True)
                     f.create_dataset(id, data=data, compression="gzip")
 
-    def load_embedding(self, id: int, model_name: str, remove: bool = False, device: str = "cpu") -> torch.Tensor | None:
-        id = str(id) # type: ignore
+    def load_embedding(
+        self, id: int, model_name: str, remove: bool = False, device: str = "cpu"
+    ) -> torch.Tensor | None:
+        id = str(id)  # type: ignore
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "r") as f:
             if id not in f:
                 logger.warning(f"{id} not found when loading embedding")
                 embed = None
             else:
-                embed = torch.Tensor(f[id][:]).flatten().to(device=device) # type: ignore
+                embed = torch.Tensor(f[id][:]).flatten().to(device=device)  # type: ignore
                 if remove:
                     self.remove_key(id, model_name)
 
         return embed
-    
-    def load_embedding_batch(self, ids: List[int], model_name: str, remove: bool = False, device: str = "cpu", silent: bool = False) -> List[torch.Tensor]:
-        logger.debug(f"Loading {len(ids)} embeddings for model {model_name} from {self.base_path}")
+
+    def load_embedding_batch(
+        self,
+        ids: List[int],
+        model_name: str,
+        remove: bool = False,
+        device: str = "cpu",
+        silent: bool = False,
+    ) -> List[torch.Tensor]:
+        logger.debug(
+            f"Loading {len(ids)} embeddings for model {model_name} from {self.base_path}"
+        )
         result = []
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "r") as f:
             for id in tqdm(ids, desc="Loading embeddings", disable=silent):
-                id = str(id) # type: ignore
+                id = str(id)  # type: ignore
                 if id not in f:
                     logger.warning(f"{id} not found when loading batch")
                 else:
-                    result.append(torch.Tensor(f[id][:]).flatten().to(device=device)) # type: ignore
+                    result.append(torch.Tensor(f[id][:]).flatten().to(device=device))  # type: ignore
                     if remove:
                         self.remove_key(id, model_name)
         return result
-    
-    def remove_key(self, id: int | str, model_name: str, ignore_not_found: bool = False): 
-        id = str(id) # type: ignore
+
+    def remove_key(
+        self, id: int | str, model_name: str, ignore_not_found: bool = False
+    ):
+        id = str(id)  # type: ignore
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "a") as f:
             if id in f:
                 del f[id]
             elif not ignore_not_found:
                 logger.info(f"{id} not found when trying to remove it.")
-    
+
     def has_key(self, id: int, model_name: str) -> bool:
-        id = str(id) # type: ignore
+        id = str(id)  # type: ignore
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "r") as f:
             return id in f
+
 
 class InputManager(ABC):
     """
@@ -216,10 +276,12 @@ class InputManager(ABC):
         """
         pass
 
+
 class PerphectDataInput(InputManager):
     """
     Input manager for Perphect data format.
     """
+
     def __init__(self, input_paths) -> None:
         self.bacteria_path = input_paths.bacteria_df
         self.phages_path = input_paths.phages_df
@@ -232,9 +294,10 @@ class PerphectDataInput(InputManager):
         if not os.path.isfile(self.couples_path):
             logger.warning(f"Couples file not found. Path tried: {self.couples_path}")
 
-        logger.info(f"Perphect input files will be read from {self.bacteria_path}, {self.phages_path} and {self.couples_path}")
+        logger.info(
+            f"Perphect input files will be read from {self.bacteria_path}, {self.phages_path} and {self.couples_path}"
+        )
 
-    
     def load(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
         # wc = int(subprocess.run([f"cat {self.base_path}*.csv | wc -l"], capture_output=True, shell=True).stdout) # line count of the files, but read_csv does not reach the end idk why

@@ -11,7 +11,10 @@ __all__ = []
 dirname = os.path.dirname(os.path.abspath(__file__))
 
 for filename in os.listdir(dirname):
-    if not filename.endswith(".py") or filename in {"__init__.py", "abstract_classifier.py"}:
+    if not filename.endswith(".py") or filename in {
+        "__init__.py",
+        "abstract_classifier.py",
+    }:
         continue
 
     module_name = filename[:-3]
@@ -22,4 +25,4 @@ for filename in os.listdir(dirname):
         if issubclass(obj, AbstractNNClassifier) and obj is not AbstractNNClassifier:
             # Inject class directly into this package’s namespace
             globals()[name] = obj
-            __all__.append(name) # type: ignore
+            __all__.append(name)  # type: ignore
