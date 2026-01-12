@@ -130,6 +130,17 @@ This will compute the embeddings for all the sequences (or use the cached ones i
 > [!NOTE]
 > If you are computing the embeddings from scratch with a merging strategy different than [*TruncateStrategy*, *BottomTruncateStrategy* or *TopBottomTruncateStrategy*], it will take multiple hours to finish.
 
+If you are using DNABERT2 as embedding model, make sure to run the execution in the `pbi-dnabert` environment. If you are using a finetuned Nucleotide Transformer v2 model, run it in the `pbi-finetune` environment.
+
+We strongly recommend computing first all the embeddings for all the models that you want to use separatedly, by executing multiple times the framework with only one embedding model at a time (and with the correct environment activated), as they will be cached and the future training will be much smoother.
+> [!NOTE]
+> The embeddings are cached for each combination of model + merging strategy, so if you change any of them, they will need to be recomputed.
+
+To run the best model found during the project, assuming that all the required embeddings have already been computed, just execute:
+```bash
+python main.py -c model_configs/best_model.yaml
+```
+
 ## Utilities
 
 Some bash scripts are also provided to help with specific needs.
