@@ -6,20 +6,27 @@ from scipy.stats import beta
 
 
 class TKPertStrategy(AbstractMergerStrategy):
+    """
+    Merge embeddings by concatenating the embeddings weighted by TK-PERT weights.
+    """
+
     def __init__(self, J: int = 16, gamma: float = 20, merging_strategy: Literal["avg", "concat"] = "concat") -> None:
+        """
+        Initialize the TK-PERT merging strategy.
+        
+        :param J: Number of windows to use.
+        :type J: int
+        :param gamma: Gamma parameter for the PERT distribution.
+        :type gamma: float
+        :param merging_strategy: Merging strategy to use: "avg" for averaging the weighted embeddings, "concat" for concatenating them.
+        :type merging_strategy: Literal["avg", "concat"]
+        """
         super().__init__()
         self.J = J
         self.gamma = gamma
         self.merging_strategy = merging_strategy
 
     def merge(self, sentences: list[str], embeddings: torch.Tensor) -> torch.Tensor:
-        """Merge embeddings of sentences into a single embedding by concatenating the embeddings weighted by TK-PERT weights.
-        Args:
-            sentences (list[str]): List of sentences (splitted dna chunks).
-            embeddings (torch.Tensor): Tensor of shape (N, D) where N is the number of sentences and D is the embedding dimension.
-        Returns:
-            torch.Tensor: Merged embedding of shape (1, D).
-        """
         embed = self.tk_pert_embedding(embeddings)
         
         return embed

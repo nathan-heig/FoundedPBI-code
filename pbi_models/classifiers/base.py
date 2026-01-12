@@ -7,6 +7,13 @@ from pbi_models.classifiers.abstract_classifier import AbstractNNClassifier
 logger = Logging()
 
 class BasicClassifier(AbstractNNClassifier):
+    """
+    A basic feedforward neural network classifier that concatenates bacterium and phage embeddings,
+    passes them through a hidden layer with ReLU activation and batch normalization, and outputs logits for
+    binary classification.
+    
+    Only implemented because it was the first one. It is not recommended for production use.
+    """
     def __init__(self, bacterium_embed_dim: int, phage_embed_dim: int, hidden_dim: int = 256):
         super().__init__(bacterium_embed_dim, phage_embed_dim)
 

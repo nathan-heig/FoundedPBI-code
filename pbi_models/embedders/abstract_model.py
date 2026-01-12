@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
-import time
 import torch
-
 from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import AbstractMergerStrategy
 from pbi_utils.embeddings_merging_strategies.truncate_strategy import TruncateStrategy
-from tqdm import tqdm
-from pbi_utils.utils import clean_gpu
 
 class AbstractModel(ABC):
+    """
+    Abstract class for DNA sequence embedding models. All embedding models should inherit from this class and implement the _compute_single_embedding and _encode methods.
+    """
 
     @abstractmethod
     def __init__(self, max_seq_len: int, merging_strategy: AbstractMergerStrategy = TruncateStrategy(), device="cpu", overlap: int = 0, load_model: bool = True, batch_size: int = 1) -> None:

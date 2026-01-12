@@ -8,7 +8,7 @@ logger = Logging()
 
 class AbstractNNClassifier(nn.Module, ABC):
     """
-    Abstract base class for classifiers based on pytorch.
+    Abstract base class for classifiers based on pytorch. All classifiers should inherit from this class and implement the forward method.
     
     **Note:** By default, the CrossEntropyLoss already applies Softmax internally, so the model must output raw logits (directly from the last layer). If not, it can cause instabilities and can cause numerical issues.
     """

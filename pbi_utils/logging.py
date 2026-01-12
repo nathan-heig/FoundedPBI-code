@@ -2,6 +2,7 @@ import logging
 import sys
 from colorama import Fore, Back, Style
 
+TRACE = 5
 DEBUG = logging.DEBUG
 INFO = logging.INFO
 WARNING = logging.WARNING
@@ -19,6 +20,7 @@ class Logging(object):
     ```
     logger = Logging()
 
+    logger.trace("This is a trace message")
     logger.debug("This is a debug message")
     logger.info("This is a info message")
     logger.warning("This is a warning")
@@ -35,6 +37,7 @@ class Logging(object):
         self.info_logger = None
         self.warning_logger = None
         self.error_logger = None
+        self.trace_logger = None
         self.disable_external_logging = disable_external_logging
 
         if self.disable_external_logging: self.disable()
@@ -62,6 +65,13 @@ class Logging(object):
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
         return logger
+    
+    def trace(self, msg) -> None:
+        self.enable()
+        if not self.trace_logger:
+            self.trace_logger = self.__create_new_logger(TRACE, format=f"{Fore.MAGENTA}[%(levelname)s]{Fore.RESET} %(message)s")
+        self.trace_logger.log(TRACE, msg)
+        if self.disable_external_logging: self.disable()
 
     def debug(self, msg) -> None:
         self.enable()

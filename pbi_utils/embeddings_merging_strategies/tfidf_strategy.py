@@ -4,18 +4,21 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer, TfidfTransformer
 
 class TfidfStrategy(AbstractMergerStrategy):
+    """
+    Merge embeddings by performing a weighted average with TF-IDF weights.
+    """
+
     def __init__(self, k: int = 6) -> None:
+        """
+        Initialize the TF-IDF merging strategy.
+        
+        :param k: k-mer size for TF-IDF computation.
+        :type k: int
+        """
         super().__init__()
         self.k = k
 
     def merge(self, sentences: list[str], embeddings: torch.Tensor) -> torch.Tensor:
-        """Merge embeddings of sentences into a single embedding by performing a weighted average with TF/IDF weights.
-        Args:
-            sentences (list[str]): List of sentences (splitted dna chunks).
-            embeddings (torch.Tensor): Tensor of shape (N, D) where N is the number of sentences and D is the embedding dimension.
-        Returns:
-            torch.Tensor: Merged embedding of shape (1, D).
-        """
         # Get TF-IDF weights for each subsequence
         weights = self._get_subsequence_weights(sentences)
 
@@ -32,9 +35,8 @@ class TfidfStrategy(AbstractMergerStrategy):
         return " ".join(seq[i:i+self.k] for i in range(len(seq) - self.k + 1))
 
     def _get_subsequence_weights(self, subsequences: list[str]) -> np.ndarray:
-        """
-        Co-authored by ChatGPT.
-        """
+        # Co-authored by ChatGPT.
+        
         docs = [self._get_kmers(subseq) for subseq in subsequences]
         
         # Compute TF-IDF matrix
@@ -51,6 +53,10 @@ class TfidfStrategy(AbstractMergerStrategy):
         return weights
 
 class Tf4idfStrategy(TfidfStrategy):
+    """
+    Merge embeddings by performing a weighted average with TF4-IDF weights.
+    TF4-IDF is a variant of TF-IDF that achieves better results in natural text, as described in https://arxiv.org/pdf/2304.14796.
+    """
     
     def _get_subsequence_weights(self, subsequences: list[str]) -> np.ndarray:
         """

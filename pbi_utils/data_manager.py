@@ -13,27 +13,114 @@ from pbi_utils.logging import Logging
 logger = Logging()
 
 class EmbeddingsManager(ABC):
+    """
+    Abstract class for embeddings storage managers. For now, only H5py is implemented, but other storage backends can be added by extending this class.
+    """
+
     @abstractmethod
     def save_embedding(self, id: int, embedding: torch.Tensor, model_name:str, overwrite: bool = False) -> None:
+        """
+        Save a single embedding.
+        
+        :param id: The identifier for the embedding.
+        :type id: int
+        :param embedding: The embedding tensor to be saved.
+        :type embedding: torch.Tensor
+        :param model_name: The name of the model associated with the embedding. Used to locate the correct storage.
+        :type model_name: str
+        :param overwrite: Whether to overwrite an existing embedding with the same id. Default is False.
+        :type overwrite: bool
+        """
         pass
 
     @abstractmethod
     def load_embedding(self, id: int, model_name:str, remove: bool = False, device: str = "cpu") -> torch.Tensor | None:
+        """
+        Load a single embedding.
+        
+        :param id: The identifier for the embedding.
+        :type id: int
+        :param model_name: The name of the model associated with the embedding. Used to locate the correct storage.
+        :type model_name: str
+        :param remove: Whether to remove the embedding from storage after loading it. Default is False.
+        :type remove: bool
+        :param device: The device to load the embedding onto. Default is "cpu".
+        :type device: str
+        :return: The loaded embedding tensor, or None if not found.
+        :rtype: Tensor | None
+        """
         pass
 
     @abstractmethod
     def save_embeddings_batch(self, ids: List[int], embeddings: List[torch.Tensor], model_name:str, overwrite: bool = False, silent: bool = False) -> None:
+        """
+        Save a batch of embeddings.
+        
+        :param ids: The list of identifiers for the embeddings.
+        :type ids: List[int]
+        :param embeddings: The list of embedding tensors to be saved.
+        :type embeddings: List[torch.Tensor]
+        :param model_name: The name of the model associated with the embeddings. Used to locate the correct storage.
+        :type model_name: str
+        :param overwrite: Whether to overwrite existing embeddings with the same ids. Default is False.
+        :type overwrite: bool
+        :param silent: Whether to suppress progress output. Default is False.
+        :type silent: bool
+        """
         pass
 
     @abstractmethod
     def load_embedding_batch(self, ids: List[int], model_name:str, remove: bool = False, device: str = "cpu", silent: bool = False) -> List[torch.Tensor]:
+        """
+        Load a batch of embeddings.
+        
+        :param ids: The list of identifiers for the embeddings.
+        :type ids: List[int]
+        :param model_name: The name of the model associated with the embeddings. Used to locate the correct storage.
+        :type model_name: str
+        :param remove: Whether to remove the embeddings from storage after loading them. Default is False.
+        :type remove: bool
+        :param device: The device to load the embeddings onto. Default is "cpu".
+        :type device: str
+        :param silent: Whether to suppress progress output. Default is False.
+        :type silent: bool
+        :return: The list of loaded embedding tensors in the device specified.
+        :rtype: List[Tensor]
+        """
         pass
 
     @abstractmethod
     def remove_key(self, id: int | str, model_name:str, ignore_not_found: bool) -> None:
+        """
+        Remove a specific embedding from storage.
+        
+        :param id: The identifier for the embedding.
+        :type id: int | str
+        :param model_name: The name of the model associated with the embedding. Used to locate the correct storage.
+        :type model_name: str
+        :param ignore_not_found: Whether to ignore the case when the embedding is not found.
+        :type ignore_not_found: bool
+        """
+        pass
+
+    @abstractmethod
+    def has_key(self, id: int, model_name:str) -> bool:
+        """
+        Check if a specific embedding exists in storage.
+        
+        :param id: The identifier for the embedding.
+        :type id: int
+        :param model_name: The name of the model associated with the embedding. Used to locate the correct storage.
+        :type model_name: str
+        :return: True if the embedding exists, False otherwise.
+        :rtype: bool
+        """
         pass
 
 class H5pyEmbeddingsManager(EmbeddingsManager):
+    """
+    Embeddings manager that uses H5py files for storage. Each model's embeddings are stored in a separate H5 file within the specified base path.
+    """
     def __init__(self, base_path: str) -> None:
         self.base_path = base_path
         os.makedirs(base_path, exist_ok=True)
@@ -47,7 +134,7 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
 
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "a") as f:
             if not overwrite and id in f:
-                print(f"{id} already exists, skipping it. To overwrite the value, use overwrite=True")
+                logger.debug(f"{id} already exists, skipping it. To overwrite the value, use overwrite=True")
             else:
                 self.remove_key(id, model_name, ignore_not_found=True)
                 f.create_dataset(id, data=data, compression="gzip")
@@ -64,7 +151,7 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
                 # ensure CPU + numpy
                 data = embedding.detach().cpu().float().numpy()
                 if not overwrite and id in f:
-                    print(f"{id} already exists, skipping it. To overwrite the value, use overwrite=True")
+                    logger.debug(f"{id} already exists, skipping it. To overwrite the value, use overwrite=True")
                 else:
                     self.remove_key(id, model_name, ignore_not_found=True)
                     f.create_dataset(id, data=data, compression="gzip")
@@ -73,7 +160,7 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
         id = str(id) # type: ignore
         with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "r") as f:
             if id not in f:
-                print(f"{id} not found")
+                logger.warning(f"{id} not found when loading embedding")
                 embed = None
             else:
                 embed = torch.Tensor(f[id][:]).flatten().to(device=device) # type: ignore
@@ -89,7 +176,7 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
             for id in tqdm(ids, desc="Loading embeddings", disable=silent):
                 id = str(id) # type: ignore
                 if id not in f:
-                    print(f"{id} not found")
+                    logger.warning(f"{id} not found when loading batch")
                 else:
                     result.append(torch.Tensor(f[id][:]).flatten().to(device=device)) # type: ignore
                     if remove:
@@ -102,14 +189,37 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
             if id in f:
                 del f[id]
             elif not ignore_not_found:
-                print(f"{id} not found")
+                logger.info(f"{id} not found when trying to remove it.")
+    
+    def has_key(self, id: int, model_name: str) -> bool:
+        id = str(id) # type: ignore
+        with h5py.File(os.path.join(self.base_path, model_name + ".h5"), "r") as f:
+            return id in f
 
 class InputManager(ABC):
+    """
+    Abstract class for data input managers.
+
+    For now, only the Perphect format is implemented, but other formats can be added by extending this class.
+    """
+
     @abstractmethod
     def load(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        """
+        Load the data and return bacteria, phages and couples dataframes.
+
+        :return: A tuple containing bacteria, phages and couples dataframes, with the following formats:
+            - Bacteria DataFrame: columns=['bacterium_id', 'bacterium_sequence']
+            - Phages DataFrame: columns=['phage_id', 'phage_sequence']
+            - Couples DataFrame: columns=['bacterium_id', 'phage_id', 'interaction_type']
+        :rtype: Tuple[DataFrame, DataFrame, DataFrame]
+        """
         pass
 
 class PerphectDataInput(InputManager):
+    """
+    Input manager for Perphect data format.
+    """
     def __init__(self, input_paths) -> None:
         self.bacteria_path = input_paths.bacteria_df
         self.phages_path = input_paths.phages_df

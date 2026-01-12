@@ -1,9 +1,11 @@
 from collections import OrderedDict
+import json
 import sys
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+import yaml
 from pbi_models.classifiers.sklearn_classifier import SklearnClassifier
 from pbi_utils.config_parser import TrainingConfig, parse_config
 from pbi_utils.data_manager import H5pyEmbeddingsManager, PerphectDataInput, EmbeddingsManager
@@ -28,8 +30,21 @@ tqdm.pandas() # Initialize tqdm with pandas
 Logging.set_logging_level(DEBUG)
 logger = Logging()
 
-def create_embeddings_bacteria(bacteria_models: List[AbstractModel], bacteria_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> None:
-        # bacteria_encoded has columns: bacterium_id, embedding_MegaDNA, embedding_DNABert, etc.
+def create_embeddings_bacteria(bacteria_models: List[AbstractModel], compute_bacteria_embeddings: List[CACHED_EMBEDDINGS_OPTION], bacteria_df: pd.DataFrame, output_manager: EmbeddingsManager) -> None:
+    """
+    Create embeddings for all bacteria using the provided models and save them using the output manager. If embeddings already exist and the corresponding compute_bacteria_embeddings is `auto`, they will not be recomputed.
+    
+    :param bacteria_models: List of bacteria embedding models (instances of AbstractModel) to use. They can be loaded or not depending on the `use_cached_embeddings` option in the config. 
+    :type bacteria_models: List[AbstractModel]
+    :param compute_bacteria_embeddings: List indicating whether to compute embeddings for each model or use cached ones. If "auto", embeddings will be computed only if they do not already exist. Use the one provided by the config parser.
+    :type compute_bacteria_embeddings: List[CACHED_EMBEDDINGS_OPTION]
+    :param bacteria_df: DataFrame containing the bacteria data with at least the columns `bacterium_id` and `bacterium_sequence`.
+    :type bacteria_df: pd.DataFrame
+    :param output_manager: EmbeddingsManager instance to handle saving and loading of embeddings.
+    :type output_manager: EmbeddingsManager
+    """
+
+    # bacteria_encoded has columns: bacterium_id, embedding_MegaDNA, embedding_DNABert, etc.
     bacteria_embed_names = [f"embedding_{model.name()}" for model in bacteria_models if model.is_loaded()]
 
     logger.info(f"Creating embeddings for {len(bacteria_embed_names)} bacteria models...")
@@ -38,15 +53,38 @@ def create_embeddings_bacteria(bacteria_models: List[AbstractModel], bacteria_df
     bacteria_encoded["bacterium_id"] = bacteria_df["bacterium_id"]
 
     # Create all the embeddings for one model and then save them all at once
-    for bacteria_model in bacteria_models:
+    for (bacteria_model, compute_embeddings) in zip(bacteria_models, compute_bacteria_embeddings):
         if not bacteria_model.is_loaded():
             logger.debug(f"Skipping bacteria model {bacteria_model.name()} (use_cached_embeddings=True).")
             continue
+        device = bacteria_model.device
         logger.debug(f"Creating bacteria embeddings for model {bacteria_model.name()}...")
-        bacteria_encoded[f"embedding_{bacteria_model.name()}"] = bacteria_df.progress_apply(lambda row: bacteria_model.embed(row["bacterium_sequence"]), axis=1) # type: ignore
-        output_manager.save_embeddings_batch(bacteria_encoded["bacterium_id"], bacteria_encoded[f"embedding_{bacteria_model.name()}"], model_name=bacteria_model.name(), overwrite=overwrite) # type: ignore
+
+        def _embed_or_load(row):
+            if compute_embeddings == "auto" and output_manager.has_key(id=row["bacterium_id"], model_name=bacteria_model.name()):
+                logger.trace(f"Loading cached embedding for bacterium_id={row['bacterium_id']}")
+                return output_manager.load_embedding(id=row["bacterium_id"], model_name=bacteria_model.name(), device=device)
+            else:
+                logger.trace(f"Computing embedding for bacterium_id={row['bacterium_id']}")
+                return bacteria_model.embed(row["bacterium_sequence"])
+            
+        bacteria_encoded[f"embedding_{bacteria_model.name()}"] = bacteria_df.progress_apply(_embed_or_load, axis=1) # type: ignore
+        output_manager.save_embeddings_batch(bacteria_encoded["bacterium_id"], bacteria_encoded[f"embedding_{bacteria_model.name()}"], model_name=bacteria_model.name(), overwrite=True) # type: ignore
     
-def create_embeddings_phages(phages_models: List[AbstractModel], phages_df: pd.DataFrame, output_manager: EmbeddingsManager, overwrite: bool = False) -> None:
+def create_embeddings_phages(phages_models: List[AbstractModel], compute_phages_embeddings: List[CACHED_EMBEDDINGS_OPTION], phages_df: pd.DataFrame, output_manager: EmbeddingsManager) -> None:
+    """
+    Create embeddings for all phages using the provided models and save them using the output manager. If embeddings already exist and the corresponding compute_phages_embeddings is `auto`, they will not be recomputed.
+    
+    :param phages_models: List of phage embedding models (instances of AbstractModel) to use. They can be loaded or not depending on the `use_cached_embeddings` option in the config.
+    :type phages_models: List[AbstractModel]
+    :param compute_phages_embeddings: List indicating whether to compute embeddings for each model or use cached ones. If "auto", embeddings will be computed only if they do not already exist. Use the one provided by the config parser.
+    :type compute_phages_embeddings: List[CACHED_EMBEDDINGS_OPTION]
+    :param phages_df: DataFrame containing the phages data with at least the columns `phage_id` and `phage_sequence`.
+    :type phages_df: pd.DataFrame
+    :param output_manager: EmbeddingsManager instance to handle saving and loading of embeddings.
+    :type output_manager: EmbeddingsManager
+    """
+    
     # phages_encoded has columns: phage_id, embedding_MegaDNA, embedding_DNABert, etc.
     phages_embed_names = [f"embedding_{model.name()}" for model in phages_models if model.is_loaded()]
 
@@ -56,15 +94,43 @@ def create_embeddings_phages(phages_models: List[AbstractModel], phages_df: pd.D
     phages_encoded["phage_id"] = phages_df["phage_id"]
 
     # Create all the embeddings for one model and then save them all at once
-    for phages_model in phages_models:
+    for (phages_model, compute_embeddings) in zip(phages_models, compute_phages_embeddings):
         if not phages_model.is_loaded():
             logger.debug(f"Skipping phage model {phages_model.name()} (use_cached_embeddings=True).")
             continue
+        device = phages_model.device
         logger.debug(f"Creating phage embeddings for model {phages_model.name()}...")
-        phages_encoded[f"embedding_{phages_model.name()}"] = phages_df.progress_apply(lambda row: phages_model.embed(row["phage_sequence"]), axis=1) # type: ignore
-        output_manager.save_embeddings_batch(phages_encoded["phage_id"], phages_encoded[f"embedding_{phages_model.name()}"], model_name=phages_model.name(), overwrite=overwrite) # type: ignore
+
+        def _embed_or_load(row):
+            if compute_embeddings == "auto" and output_manager.has_key(id=row["phage_id"], model_name=phages_model.name()):
+                logger.trace(f"Loading cached embedding for phage_id={row['phage_id']}")
+                return output_manager.load_embedding(id=row["phage_id"], model_name=phages_model.name(), device=device)
+            else:
+                logger.trace(f"Computing embedding for phage_id={row['phage_id']}")
+                return phages_model.embed(row["phage_sequence"])
+            
+        phages_encoded[f"embedding_{phages_model.name()}"] = phages_df.progress_apply(_embed_or_load, axis=1) # type: ignore
+        output_manager.save_embeddings_batch(phages_encoded["phage_id"], phages_encoded[f"embedding_{phages_model.name()}"], model_name=phages_model.name(), overwrite=True) # type: ignore
     
 def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phages_model_names: List[str], output_manager: EmbeddingsManager, device: str) -> pd.DataFrame:
+    """
+    Create a dataset with embeddings for bacteria and phages by loading them from the output manager. The final DataFrame will have columns: bacterium_id, phage_id, interaction_type, bacterium_embedding, phage_embedding.
+    
+    :param couples_df: DataFrame containing the couples data with columns `bacterium_id`, `phage_id` and `interaction_type`.
+    :type couples_df: pd.DataFrame
+    :param bacteria_model_names: List of bacteria embedding model names to load embeddings from. Used to load the corresponding embeddings for each bacterium.
+    :type bacteria_model_names: List[str]
+    :param phages_model_names: List of phage embedding model names to load embeddings from.
+    :type phages_model_names: List[str]
+    :param output_manager: EmbeddingsManager instance to handle loading of embeddings.
+    :type output_manager: EmbeddingsManager
+    :param device: Device to load the embeddings onto (e.g., "cpu" or "cuda:0").
+    :type device: str
+    :return: DataFrame with columns: bacterium_id, phage_id, interaction_type, bacterium_embedding, phage_embedding.
+    :rtype: DataFrame
+    """
+    
+    # Helper function to average tensors of different lengths. Not currently used, but kept for reference.
     def avg_tensors(sequences):
         import torch.nn.functional as F
         num = len(sequences)
@@ -88,8 +154,8 @@ def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phag
         bacteria_embeddings.append(output_manager.load_embedding_batch(result["bacterium_id"].tolist(), model_name=bacteria_model, device=device))
     
     # The embeddings are concatenated to form 1 final embedding per bacterium/phage. 
-    # TODO: One of the papers mentions that you can also simply add them, to reduce the final size, consider testing it.
     result["bacterium_embedding"] = pd.Series([torch.cat(embeds) for embeds in zip(*bacteria_embeddings)])
+    # One of the papers mentions that you can also simply add them, to reduce the final size, but did not obtain better results
     # result["bacterium_embedding"] = pd.Series([avg_tensors(embeds) for embeds in zip(*bacteria_embeddings)]) # Avg of the embeddings instead of concat
 
     phage_embeddings = []
@@ -103,7 +169,26 @@ def make_dataset(couples_df: pd.DataFrame, bacteria_model_names: List[str], phag
 
     return result
 
-def reduce_dimensionality(dataset: pd.DataFrame, technique: DIMENSIONALITY_REDUCTION_TECHNIQUE, output_dir: str | None, n_components_bact: int | None, n_components_phag: int | None) -> pd.DataFrame:
+def reduce_dimensionality(dataset: pd.DataFrame, technique: DIMENSIONALITY_REDUCTION_TECHNIQUE, output_dir: str | None, n_components_bact: int | None = None, n_components_phag: int | None = None) -> pd.DataFrame:
+    """
+    Reduce the dimensionality of the embeddings in the dataset using the specified technique. Supported techniques are "none" (no reduction), "PCA" (Principal Component Analysis).
+    
+    If output_dir is provided and PCA is used, plots of the explained variance will be saved in that directory.
+
+    :param dataset: DataFrame containing the dataset with columns `bacterium_embedding` and `phage_embedding` as tensors.
+    :type dataset: pd.DataFrame
+    :param technique: Dimensionality reduction technique to apply. Must be one of `DIMENSIONALITY_REDUCTION_TECHNIQUE`.
+    :type technique: DIMENSIONALITY_REDUCTION_TECHNIQUE
+    :param output_dir: Directory to save output plots (if PCA is used). If None, no plots will be saved.
+    :type output_dir: str | None
+    :param n_components_bact: Number of components to keep for bacteria embeddings. If None, all components are kept.
+    :type n_components_bact: int | None
+    :param n_components_phag: Number of components to keep for phage embeddings. If None, all components are kept.
+    :type n_components_phag: int | None
+    :return: DataFrame with reduced dimensionality embeddings.
+    :rtype: DataFrame
+    """
+    
     def plot_exp_variance(exp_var, output_path: str, title: str = "PCA Explained Variance"):
         cum_sum = np.cumsum(exp_var)
 
@@ -120,6 +205,7 @@ def reduce_dimensionality(dataset: pd.DataFrame, technique: DIMENSIONALITY_REDUC
     
     if technique == "none":
         pass
+
     elif technique == "PCA":
         pca_bact = PCA(random_state=42, n_components=n_components_bact)
         dataset["bacterium_embedding"] = list(torch.from_numpy(pca_bact.fit_transform(dataset["bacterium_embedding"].apply(lambda x: x.detach().cpu().numpy()).to_list())).float()) # type: ignore
@@ -132,15 +218,27 @@ def reduce_dimensionality(dataset: pd.DataFrame, technique: DIMENSIONALITY_REDUC
 
             plot_exp_variance(pca_bact.explained_variance_ratio_, os.path.join(output_dir, "pca_explained_variance_bacterium.png"), "PCA Explained Variance (Bacterium Embedding)")
             plot_exp_variance(pca_phag.explained_variance_ratio_, os.path.join(output_dir, "pca_explained_variance_phage.png"), "PCA Explained Variance (Phage Embedding)")
+        
+        logger.debug(f"Embedding size (After dimensionality reduction) (bacteria): {len(dataset['bacterium_embedding'].iloc[0])}")
+        logger.debug(f"Embedding size (After dimensionality reduction) (phages): {len(dataset['phage_embedding'].iloc[0])}")
+    
     else:
         raise ValueError(f"{technique} for dimensionality reduction not supported. Allowed values: {DIMENSIONALITY_REDUCTION_TECHNIQUE}")
-
-    logger.debug(f"Embedding size (After dimensionality reduction) (bacteria): {len(dataset['bacterium_embedding'].iloc[0])}")
-    logger.debug(f"Embedding size (After dimensionality reduction) (phages): {len(dataset['phage_embedding'].iloc[0])}")
 
     return dataset
 
 def dataframe_to_tf_dataloader(df: pd.DataFrame, batch_size: int, device: str):
+    """
+    Convert a DataFrame with embeddings and interaction types into a PyTorch DataLoader for training/testing.
+    
+    :param df: DataFrame containing the dataset with columns `bacterium_embedding`, `phage_embedding`, and `interaction_type`.
+    :type df: pd.DataFrame
+    :param batch_size: Batch size for the DataLoader.
+    :type batch_size: int
+    :param device: Device to load the tensors onto (e.g., "cpu" or "cuda:0").
+    :type device: str
+    """
+    
     dataset = TensorDataset(
         torch.stack(list(df["bacterium_embedding"])),
         torch.stack(list(df["phage_embedding"])),
@@ -151,7 +249,22 @@ def dataframe_to_tf_dataloader(df: pd.DataFrame, batch_size: int, device: str):
     return dataloader
 
 def compute_metrics(tn: float, fp: float, fn: float, tp: float) -> Tuple[float, float, float]:
-    """Compute Accuracy, Recall and F1Score from the confusion matrix"""
+    """
+    Compute Accuracy, Recall and F1Score from the confusion matrix.
+    
+    :param tn: True Negatives
+    :type tn: float
+    :param fp: False Positives
+    :type fp: float
+    :param fn: False Negatives
+    :type fn: float
+    :param tp: True Positives
+    :type tp: float
+    :return: Tuple containing Accuracy, Recall and F1Score.
+    :rtype: Tuple[float, float, float]
+    
+    """
+
     acc = (tp+tn)/(tp+tn+fp+fn)
     rec = tp/(tp+fn)
     f1 = (2*tp)/(2*tp+fp+fn)
@@ -159,6 +272,15 @@ def compute_metrics(tn: float, fp: float, fn: float, tp: float) -> Tuple[float, 
     return acc, rec, f1
 
 def dataframe_to_numpy_X_y(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
+    """
+    Convert a DataFrame with embeddings and interaction types into numpy arrays for X and y.
+    
+    :param df: DataFrame containing the dataset with columns `bacterium_embedding`, `phage_embedding`, and `interaction_type`.
+    :type df: pd.DataFrame
+    :return: Tuple containing the features (X) and labels (y).
+    :rtype: tuple[DataFrame, Series[Any]]
+    """
+
     y = df["interaction_type"]
     X = df[["bacterium_embedding", "phage_embedding"]]
 
@@ -166,15 +288,42 @@ def dataframe_to_numpy_X_y(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     return X, y
 
 def train_model(train_df: pd.DataFrame, model: nn.Module | SklearnClassifier, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
-    """Allow torch models and scikit-learn models"""
+    """
+    Train a model (either a PyTorch nn.Module or a SklearnClassifier) using the provided training DataFrame. Optionally, a validation DataFrame can be provided for evaluation during training.
+    
+    :param train_df: DataFrame containing the training dataset with columns `bacterium_embedding`, `phage_embedding`, and `interaction_type`.
+    :type train_df: pd.DataFrame
+    :param model: Model to train, either a PyTorch nn.Module or a SklearnClassifier.
+    :type model: nn.Module | SklearnClassifier
+    :param training_config: Training configuration parameters.
+    :type training_config: TrainingConfig
+    :param device: Device to use for training (e.g., "cpu" or "cuda:0").
+    :type device: str
+    :param use_multiple_gpu: Whether to use multiple GPUs for training (if available).
+    :type use_multiple_gpu: bool
+    :param val_df: Optional DataFrame containing the validation dataset for evaluation during training.
+    :type val_df: pd.DataFrame | None
+    :param verbose: Verbosity level for logging.
+    :type verbose: int
+    :param progressbar_description: Description for the progress bar during training.
+    :type progressbar_description: str
+    :return: Confusion matrix after training. Format: [[tn, fp], [fn, tp]]
+    :rtype: np.ndarray
+    """
     
     if isinstance(model, nn.Module):
         return train_nn_model(train_df, model, training_config, device, use_multiple_gpu, val_df, verbose, progressbar_description)
     
     else:
-        return train_sklearn_model(train_df, model, training_config, device, use_multiple_gpu, val_df, verbose, progressbar_description)
+        return _train_sklearn_model(train_df, model, training_config, device, use_multiple_gpu, val_df, verbose, progressbar_description)
 
-def train_sklearn_model(train_df: pd.DataFrame, model: SklearnClassifier, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
+def _train_sklearn_model(train_df: pd.DataFrame, model: SklearnClassifier, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
+    """
+    Train a SklearnClassifier model using the provided training DataFrame. Optionally, a validation DataFrame can be provided for evaluation during training.
+    
+    See :func:`train_model` for parameter descriptions.
+    """
+
     if verbose >= 2:
         logger.info(f"Starting training...")
 
@@ -207,6 +356,12 @@ def train_sklearn_model(train_df: pd.DataFrame, model: SklearnClassifier, traini
     return cm
 
 def train_nn_model(train_df: pd.DataFrame, model: nn.Module, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True, val_df: pd.DataFrame | None = None, verbose: int = 2, progressbar_description: str = "") -> np.ndarray:
+    """
+    Train a PyTorch nn.Module model using the provided training DataFrame. Optionally, a validation DataFrame can be provided for evaluation during training.
+    
+    See :func:`train_model` for parameter descriptions.
+    """
+    
     dataloader = dataframe_to_tf_dataloader(train_df, batch_size=training_config.batch_size, device=device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=training_config.learning_rate, weight_decay=training_config.weight_decay)
@@ -312,15 +467,36 @@ def train_nn_model(train_df: pd.DataFrame, model: nn.Module, training_config: Tr
     return cm_mat
 
 def test_model(test_df: pd.DataFrame, model: nn.Module | SklearnClassifier, batch_size: int, device: str, silent: bool = False) -> tuple[np.ndarray, float]:
-    """Allow torch and scikit-learn models"""
+    """
+    Test a model (either a PyTorch nn.Module or a SklearnClassifier) using the provided test DataFrame.
+    
+    :param test_df: DataFrame containing the test dataset with columns `bacterium_embedding`, `phage_embedding`, and `interaction_type`.
+    :type test_df: pd.DataFrame
+    :param model: Model to test, either a PyTorch nn.Module or a SklearnClassifier.
+    :type model: nn.Module | SklearnClassifier
+    :param batch_size: Batch size for testing.
+    :type batch_size: int
+    :param device: Device to use for testing (e.g., "cpu" or "cuda:0").
+    :type device: str
+    :param silent: Whether to suppress logging output during testing.
+    :type silent: bool
+    :return: Tuple containing the confusion matrix and test loss (if applicable). Format of confusion matrix: [[tn, fp], [fn, tp]]
+    :rtype: tuple[np.ndarray, float]
+    """
 
     if isinstance(model, nn.Module):
         return test_nn_model(test_df, model, batch_size, device, silent)
-    
+
     else:
         return test_sklearn_model(test_df, model, batch_size, device, silent)
 
 def test_sklearn_model(test_df: pd.DataFrame, model: SklearnClassifier, batch_size: int, device: str, silent: bool = False) -> tuple[np.ndarray, float]:
+    """
+    Test a SklearnClassifier model using the provided test DataFrame.
+
+    See :func:`test_model` for parameter descriptions.
+    """
+    
     if not silent:
         logger.info(f"Starting testing...")
     
@@ -341,6 +517,12 @@ def test_sklearn_model(test_df: pd.DataFrame, model: SklearnClassifier, batch_si
     return cm, -1
 
 def test_nn_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, device: str, silent: bool = False) -> tuple[np.ndarray, float]:
+    """
+    Test a PyTorch nn.Module model using the provided test DataFrame.
+    
+    See :func:`test_model` for parameter descriptions.
+    """
+    
     if not silent:
         logger.info(f"Starting testing...")
     dataloader = dataframe_to_tf_dataloader(test_df, batch_size, device)
@@ -386,7 +568,18 @@ def test_nn_model(test_df: pd.DataFrame, model: nn.Module, batch_size: int, devi
 
 def kfold_train(df: pd.DataFrame, model: nn.Module | SklearnClassifier, training_config: TrainingConfig, device: str, use_multiple_gpu: bool = True):
     """
-    Train model and test using K-Fold cross validation
+    Perform K-Fold Cross Validation training on the provided DataFrame using the specified model and training configuration.
+    
+    :param df: DataFrame containing the dataset with columns `bacterium_embedding`, `phage_embedding`, and `interaction_type`.
+    :type df: pd.DataFrame
+    :param model: Model to train, either a PyTorch nn.Module or a SklearnClassifier.
+    :type model: nn.Module | SklearnClassifier
+    :param training_config: Training configuration parameters.
+    :type training_config: TrainingConfig
+    :param device: Device to use for training (e.g., "cpu" or "cuda:0").
+    :type device: str
+    :param use_multiple_gpu: Whether to use multiple GPUs for training (if available).
+    :type use_multiple_gpu: bool
     """
 
     kfold = KFold(n_splits=training_config.k_folds_cv, shuffle=True, random_state=42)
@@ -464,8 +657,8 @@ if __name__ == "__main__":
     output_manager = H5pyEmbeddingsManager(config.embeddings_dir)
 
     
-    create_embeddings_bacteria(config.bacteria_embedding_models, bacteria_df, output_manager, overwrite=True)
-    create_embeddings_phages(config.phages_embedding_models, phages_df, output_manager, overwrite=True)
+    create_embeddings_bacteria(config.bacteria_embedding_models, config.compute_bacteria_embeddings, bacteria_df, output_manager)
+    create_embeddings_phages(config.phages_embedding_models, config.compute_phages_embeddings, phages_df, output_manager)
 
     # Create datasets, train and test classifier
     if config.training_config.do_train:
@@ -499,7 +692,6 @@ if __name__ == "__main__":
         # Instantiate classifier
         bacterium_embed_size = len(train["bacterium_embedding"].iloc[0])
         phage_embed_size = len(train["phage_embedding"].iloc[0])
-        # model = BasicClassifier(bacterium_embed_size, phage_embed_size, hidden_dim=256)
         model = config.classifier(bacterium_embed_size, phage_embed_size, **config.classifier_params)
 
         stats.update_classifier(model)
@@ -517,7 +709,7 @@ if __name__ == "__main__":
 
         stats.update_test_results(cm, test_time)
 
-        stats.log(logger.info)
+        # stats.log(logger.info)
 
         # Save the trained model
         if config.output_dir is not None:
@@ -530,6 +722,13 @@ if __name__ == "__main__":
                 # TODO: SklearnClassifier save method
                 logger.warning("Saving sklearn models currently not supported. Not saving the model.")
 
-            # TODO: Save stats to a file as well, and also the config file used for training
+            # Save stats and the config file used for training
+            training_config_path = os.path.join(config.output_dir, "training_config.yaml")
+            with open(training_config_path, "w") as f:
+                yaml.dump(config.raw_dict, f)
+            logger.info(f"Training config saved to: {training_config_path}")
 
-
+            stats_path = os.path.join(config.output_dir, "stats.log")
+            with open(stats_path, "w") as f:
+                stats.log(f)
+            logger.info(f"Run stats saved to: {stats_path}")

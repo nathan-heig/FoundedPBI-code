@@ -1,18 +1,20 @@
 from abc import ABC
 from sklearn.utils import all_estimators
 import importlib
-from lightgbm import LGBMClassifier
-from xgboost import XGBClassifier
 
 class SklearnClassifier(ABC):
     """
-    Base class for classifiers based on Scikit-learn
+    Base class for classifiers based on Scikit-learn plus LightGBM and XGBoost. All (scikit-learn) classifiers should inherit from this class and implement the fit and predict methods.
     """
 
     def _get_sklearn_classifier(self, model_name: str) -> type:
         # Special case for LGBM & XGB
-        if model_name == "LGBMClassifier": return LGBMClassifier
-        elif model_name == "XGBClassifier": return XGBClassifier
+        if model_name == "LGBMClassifier":
+            from lightgbm import LGBMClassifier 
+            return LGBMClassifier
+        elif model_name == "XGBClassifier": 
+            from xgboost import XGBClassifier
+            return XGBClassifier
 
         # Generic sklearn models
         estimators = all_estimators(type_filter='classifier')

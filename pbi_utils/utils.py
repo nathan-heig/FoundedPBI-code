@@ -12,6 +12,9 @@ def clean_gpu():
     gc.collect()
 
 class Stats:
+    """
+    Class to store training and testing statistics
+    """
     def __init__(self, args) -> None:
         self.args = args
         self.test_cm = None # CM always in the form (TN, FP, FN, TP)
@@ -32,7 +35,11 @@ class Stats:
         self.classifier = classifier
 
     def log(self, logger):
-        # Print all the stats in the format required by excel
+        """
+        Log the statistics using the provided logger, in a the required format to copy it to a google sheet.
+        
+        :param logger: Logger instance to use for logging, i.e., logger.info
+        """
 
         bacteria_model_names = [str(x) for x in self.args.bacteria_embedding_models]
         phages_model_names = [str(x) for x in self.args.phages_embedding_models]
