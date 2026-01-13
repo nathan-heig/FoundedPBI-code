@@ -122,7 +122,7 @@ Next, enter their folder, and in the file `flash_attn_triton.py` replace all the
 > [!IMPORTANT]
 > Take your time replacing them, as in some of them it is the first parameter the one that needs to be transposed. If you make a mistake it might continue to work (or it might not) but obtain bad results.
 
-Finally, starting from the last step in the base environment (create a new one called `pbi-dnabert` and follow the same steps), install now the latest version of triton, with:
+Finally, starting from the last step in the base environment (create a new one called `pbi-dnabert` and follow the same steps), install now the latest version of triton (tested with triton==3.5.1), with:
 ```bash
 pip install --upgrade triton
 ```
