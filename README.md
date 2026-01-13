@@ -1,5 +1,23 @@
 # PBI
 
+## Table of Contents
+1. [Overview](#overview)
+2. [Repository structure](#repository-structure)
+3. [Environment](#environment)
+    - [Base Environment](#base-environment)
+    - [DNABERT2 Environment](#dnabert2-environment)
+    - [Finetuning Nucleotide Transformer v2](#finetuning-nucleotide-transformer-v2)
+4. [Execution](#execution)
+5. [Available Models](#available-models)
+    - [Embedding Models](#embedding-models)
+    - [Classifier Models](#classifier-models)
+    - [Adding New Models](#adding-new-models)
+7. [Available Merging Strategies](#available-merging-strategies)
+    - [Adding New Merging Strategies](#adding-new-merging-strategies)
+8. [Utilities](#utilities)
+
+## Overview
+
 This repository contains all the code for the new iteration at solving the PBI problem by the CI4CB laboratory.
 
 It includes a framework to test and verify multiple approaches at solving the problem, with a modular architecture where any part can be tuned.
@@ -8,7 +26,7 @@ It includes a framework to test and verify multiple approaches at solving the pr
 
 The framework consists in two branches that embed and compress the DNA sequences of the bacterium and phage, and a classifier that makes the prediction. For each of the branches, first, 3 foundation models are used to compute the embeddings of the sequence, by dividing it into multiple subsequences of maximum size (that the model allows) and embedding all the parts. Then, a strategy is used to transform this set of embeddings to one single meta-embedding, to which PCA is applied to reduce even more the dimensionality. Finally, the meta-embeddings from the two branches are given to the classifier and it predicts wether the two organisms have an interaction or not.
 
-Every part of the architecture is configurable, by passing a YAML configuration to the execution. As an example, [model_configs/example.yaml](model_configs/example.yaml) contains all the parameters that can be used with an explanation.
+Every part of the architecture is configurable, by passing a YAML configuration to the execution. As an example, [model_configs/example.yaml](model_configs/example.yaml) contains all the parameters that can be used with an explanation. In addition, the [Available Models](#available-models) contains all the implemented models that can be used, both for the embedders and classifiers.
 
 ## Repository structure
 
@@ -140,6 +158,67 @@ To run the best model found during the project, assuming that all the required e
 ```bash
 python main.py -c model_configs/best_model.yaml
 ```
+
+## Available Models
+The following models are implemented and can be used in the framework.
+
+### Embedding Models
+- Nucleotide Transformer v2: [nature.com/articles/s41592-024-02523-z](https://www.nature.com/articles/s41592-024-02523-z)
+
+- DNABERT2: [arxiv.org/pdf/2306.15006](https://arxiv.org/pdf/2306.15006).
+
+- MegaDNA: [nature.com/articles/s41467-024-53759-4](https://www.nature.com/articles/s41467-024-53759-4)
+
+### Foundation Models Features Comparison
+
+| Model | Base Architecture | Tokenization | Positional Information | Context Length | Parameters | Training Data |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| `Nucleotide Transformer v2` | Transformer (BERT) | 6-mers | Rotary embeddings | 12K bp | 50M - 500M | <sup>1</sup> |
+| `DNABERT2` | Transformer (BERT) | BPE | ALiBi | 10K bp | 117M | <sup>2</sup> |
+| `MegaDNA` | Transformer (GPT) | single-nucleotide | None | 96K bp | 145M | <sup>4</sup> |
+| `EVO2` | Convolutions (StripedHyena) | single-nucleotide | Rotary embeddings | 131K bp | 1B - 70B | <sup>3</sup> |
+
+**Notes on Training Data:**
+* **1:** Human, mammalian, fungi and bacteria genomes
+* **2:** Human, mammalian, fungi, invertebrate and bacteria genomes
+* **3:** DNA and RNA sequences from all domain of life, including virus
+* **4:** Only bacteriophage genomes
+
+EVO2 model is not implemented because it can only run on higher-end GPUs due to its memory requirements, mainly NVIDIA H100 or H200. If you want to use it, you can implement it by following the structure of the other models, inheriting from the `AbstractEmbedder` class.
+
+### Classifier Models
+- BasicClassifier: Simple MLP with 1 hidden layer. Has only one hyperparameter, the hidden layer size.
+- BasicMLPClassifier: More complex MLP with multiple hidden layers, dropout and batch normalization. Has two hyperparameters, *mlp_params* (a list of integers with the size of each hidden layer) and *dropout* (the dropout probability, equal for all the layers).
+- MLPClassifier: Two-branch MLP classifier, with different parameters for each branch. Each branch has its own *<bacterium|phage>_mlp_sizes* parameter, and *dense_dim* (size of the final dense layer before the output) and *dropout* (dropout probability, equal for all the layers) are shared.
+- CNNClassifier: Two-branch CNN classifier, with different parameters for each branch. Each branch has its own *<bacterium|phage>_conv_params*, which is a list of tuples with the parameters for each convolutional layer (out_channels, kernel_size, stride). The rest of the parameters are shared: *dense_dim* (size of the final dense layer before the output) and *dropout* (dropout probability, equal for all the layers).
+- BasicCNNClassifier: Similar to CNNClassifier, but with a single branch CNN architecture. The parameters are: *cnn_params* (a list of tuples with the parameters for each convolutional layer (out_channels, kernel_size, stride)), *dense_dim* (size of the final dense layer before the output) and *dropout* (dropout probability, equal for all the layers).
+- LinearClassifier: Simple linear classifier. No hyperparameters.
+- SklearnClassifier: Any Sci-kit learn classifier can be used here. Just specify the *sklearn_model* parameter with the name of the model (for example, `RandomForestClassifier`, `LogisticRegression`, etc.) and the *sklearn_params* parameter with a dictionary of the hyperparameters for that model. In addition, LightGBM and XGBoost classifiers are also supported, by specifying `LGBMClassifier` and `XGBClassifier` respectively.
+
+### Adding New Models
+
+To add a new embedding model or classifier, you need to create a new file inside the corresponding folder in `pbi_models/`, create a new class that inherits from the abstract class (`AbstractEmbedder` or `AbstractClassifier`) and implement all the required methods (the ones tagged as `@abstractmethod` in the abstract class file). The system will automatically detect the new model and will be able to use it, just by specifying its name in the YAML configuration file. You can check the existing models as an example of how to implement it.
+
+> [!NOTE]
+> Make sure to follow the input and output specifications of the abstract classes, otherwise the framework will not work correctly.
+
+## Available Merging Strategies
+The following merging strategies are implemented and can be used in the framework. See [this paper](https://arxiv.org/pdf/2304.14796) for more details about any of them, or the docstrings inside each class.
+
+- AverageStrategy: Computes the average of all the embeddings.
+- MaxStrategy: Computes the maximum value for each dimension across all the embeddings.
+- TfidfStrategy: Computes a weighted average of the embeddings, where the weights are computed using the TF-IDF algorithm.
+- Tf4idfStrategy: Similar to TfidfStrategy, but uses the TF4-IDF formulas to compute the weights.
+- TKPertStrategy: Uses the TKPert algorithm to compute the weights for each embedding, and then computes a weighted average. Has three hyperparameters: *J* (the number of windows to use), *gamma* (the gamma parameter for the PERT function) and *merging_strategy* (the merging strategy used to combine the weighted embeddings, can be `avg` or `concat`). 
+- TruncateStrategy: Only considers the first embedding of all the ones embedded by the foundation model.
+- BottomTruncateStrategy: Only considers the last embedding of all the ones embedded by the foundation model.
+- TopBottomTruncateStrategy: Considers both the first and last embeddings of all the ones embedded by the foundation model, and concatenates them.
+
+### Adding New Merging Strategies
+To add a new merging strategy, you need to create a new file inside the `pbi_utils/embeddings_merging_strategies/` folder, create a new class that inherits from the `AbstractMergerStrategy` class and implement at least the `merge()` method. The system will automatically detect the new merging strategy and will be able to use it, just by specifying its name in the YAML configuration file. You can check the existing merging strategies as an example of how to implement it.
+
+> [!NOTE]
+> Make sure to follow the input and output specifications of the abstract class, otherwise the framework will not work correctly.
 
 ## Utilities
 
