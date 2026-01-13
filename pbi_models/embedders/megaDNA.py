@@ -30,7 +30,7 @@ class MegaDNA(AbstractModel):
         if self.load_model:
             if not os.path.isfile(weights_path):
                 logger.warning(
-                    f"Weights not found, downloading them again and saving them to: {weights_path}"
+                    f"[MegaDNA] Weights not found, downloading them again and saving them to: {weights_path}"
                 )
                 os.makedirs(weights_path.rsplit("/", maxsplit=1)[0], exist_ok=True)
                 urllib.request.urlretrieve(
@@ -42,7 +42,7 @@ class MegaDNA(AbstractModel):
             self.model = torch.load(weights_path, map_location=torch.device(device))
             self.model.eval()
             self.max_seq_len = reduce(lambda x, y: x * y, self.model.max_seq_len) - 1
-            logger.debug(f"Max sequence length for megaDNA: {self.max_seq_len}")
+            logger.debug(f"[MegaDNA] Max sequence length for megaDNA: {self.max_seq_len}")
 
         self.merging_strategy = merging_strategy
         self.overlap = int(overlap)
@@ -91,7 +91,7 @@ class MegaDNA(AbstractModel):
     def _encode_single(self, dna_sequence: str) -> torch.Tensor:
         if len(dna_sequence) > self.max_seq_len:
             logger.debug(
-                f"Found DNA sequence longer than max length ({len(dna_sequence)} vs {self.max_seq_len}), trimming it"
+                f"[MegaDNA] Found DNA sequence longer than max length ({len(dna_sequence)} vs {self.max_seq_len}), trimming it"
             )
             dna_sequence = dna_sequence[: self.max_seq_len]
         elif len(dna_sequence) < self.max_seq_len:

@@ -110,6 +110,9 @@ If everything worked correctly, congratulations, you can now start executing thi
 
 ### DNABERT2 Environment
 
+> [!TIP]
+> If you are not using the DNABERT2 model or are using cached embeddings, do not use this environment, and use the base one instead.
+
 To use DNABERT2, first, you need to download their repository.
 ```bash
 git clone https://huggingface.co/zhihan1996/DNABERT-2-117M
@@ -126,6 +129,9 @@ pip install --upgrade triton
 Pip will complain, as the `torch` version is too old to use the last version of `triton`. Just ignore it and it will work anyways.
 
 ### Finetuning Nucleotide Transformer v2
+
+> [!TIP]
+> If you are not using a finetuned model or are using cached embeddings, do not use this environment, and use the base one instead.
 
 To finetune the Nucleotide Transformer v2 model, create a new environment called `pbi-finetune` and follow the same steps as in the base environment.
 
@@ -149,6 +155,8 @@ This will compute the embeddings for all the sequences (or use the cached ones i
 > If you are computing the embeddings from scratch with a merging strategy different than [*TruncateStrategy*, *BottomTruncateStrategy* or *TopBottomTruncateStrategy*], it will take multiple hours to finish.
 
 If you are using DNABERT2 as embedding model, make sure to run the execution in the `pbi-dnabert` environment. If you are using a finetuned Nucleotide Transformer v2 model, run it in the `pbi-finetune` environment.
+> [!NOTE]
+> The DNABERT2 model has high GPU VRAM needs, and must be run on higher-end GPUs, such as NVIDIA A40.
 
 We strongly recommend computing first all the embeddings for all the models that you want to use separatedly, by executing multiple times the framework with only one embedding model at a time (and with the correct environment activated), as they will be cached and the future training will be much smoother.
 > [!NOTE]

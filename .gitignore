@@ -221,3 +221,5 @@ finetuning/DNABERT_2/
 finetuning/datasets/
 
 output/
+
+DNABERT-2-117M/

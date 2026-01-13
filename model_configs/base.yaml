@@ -1,6 +1,6 @@
 input_perphect: data/perphect-data/private_data_set
 num_gpu: 1
-gpu_id: 3
+gpu_id: 0
 
 phages_embedding_models:
   - name: NT2

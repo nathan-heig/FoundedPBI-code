@@ -49,7 +49,7 @@ class DNABERT2(AbstractModel):
 
         self.max_seq_len = int(float(max_seq_len))
 
-        logger.debug(f"Max sequence length for DNABERT2: {self.max_seq_len}")
+        logger.debug(f"[DNABERT2] Max sequence length for DNABERT2: {self.max_seq_len}")
 
     def _compute_single_embedding(self, tokens: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():

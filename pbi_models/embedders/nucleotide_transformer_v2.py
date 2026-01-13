@@ -99,7 +99,7 @@ class NT2(AbstractModel):
             ) * 6  # NT tokenizes the sequence as 6-mers, and max_seq_len is for the tokenized sequence. (-1 for the special tokens)
 
             logger.debug(
-                f"Max sequence length for Nucleotide Transformer: {self.max_seq_len}"
+                f"[NT2] Max sequence length for Nucleotide Transformer: {self.max_seq_len}"
             )
 
     def _compute_single_embedding(self, tokens: torch.Tensor) -> torch.Tensor:
