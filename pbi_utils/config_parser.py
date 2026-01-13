@@ -214,7 +214,7 @@ class Config:
             model_params = model_config.params
             model_params["merging_strategy"] = merging_strategy
             model_params["device"] = self.device
-            model_params["load_model"] = model_config.use_cached_embeddings != False
+            model_params["load_model"] = model_config.use_cached_embeddings != True
 
             model = self._get_instance_from_string(
                 model_config.name, subclass_of=AbstractModel

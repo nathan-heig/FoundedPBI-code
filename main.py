@@ -341,8 +341,8 @@ def dataframe_to_tf_dataloader(df: pd.DataFrame, batch_size: int, device: str):
     """
 
     dataset = TensorDataset(
-        torch.stack(list(df["bacterium_embedding"])),
-        torch.stack(list(df["phage_embedding"])),
+        torch.stack(list(df["bacterium_embedding"])).to(device),
+        torch.stack(list(df["phage_embedding"])).to(device),
         torch.tensor(df["interaction_type"].values, dtype=torch.long, device=device),
     )
     dataloader = DataLoader(dataset, batch_size=batch_size)
@@ -408,7 +408,6 @@ def train_model(
     model: nn.Module | SklearnClassifier,
     training_config: TrainingConfig,
     device: str,
-    use_multiple_gpu: bool = True,
     val_df: pd.DataFrame | None = None,
     verbose: int = 2,
     progressbar_description: str = "",
@@ -424,8 +423,6 @@ def train_model(
     :type training_config: TrainingConfig
     :param device: Device to use for training (e.g., "cpu" or "cuda:0").
     :type device: str
-    :param use_multiple_gpu: Whether to use multiple GPUs for training (if available).
-    :type use_multiple_gpu: bool
     :param val_df: Optional DataFrame containing the validation dataset for evaluation during training.
     :type val_df: pd.DataFrame | None
     :param verbose: Verbosity level for logging.
@@ -442,7 +439,6 @@ def train_model(
             model,
             training_config,
             device,
-            use_multiple_gpu,
             val_df,
             verbose,
             progressbar_description,
@@ -454,7 +450,6 @@ def train_model(
             model,
             training_config,
             device,
-            use_multiple_gpu,
             val_df,
             verbose,
             progressbar_description,
@@ -466,7 +461,6 @@ def _train_sklearn_model(
     model: SklearnClassifier,
     training_config: TrainingConfig,
     device: str,
-    use_multiple_gpu: bool = True,
     val_df: pd.DataFrame | None = None,
     verbose: int = 2,
     progressbar_description: str = "",
@@ -514,7 +508,6 @@ def train_nn_model(
     model: nn.Module,
     training_config: TrainingConfig,
     device: str,
-    use_multiple_gpu: bool = True,
     val_df: pd.DataFrame | None = None,
     verbose: int = 2,
     progressbar_description: str = "",
@@ -528,6 +521,8 @@ def train_nn_model(
     dataloader = dataframe_to_tf_dataloader(
         train_df, batch_size=training_config.batch_size, device=device
     )
+    
+    model.to(device)
 
     optimizer = torch.optim.Adam(
         model.parameters(),
@@ -551,10 +546,6 @@ def train_nn_model(
     f1 = tm.F1Score(task="binary").to(device)
     cm = tm.ConfusionMatrix(task="binary").to(device)
 
-    if use_multiple_gpu:
-        model = nn.DataParallel(model)
-
-    model.to(device)
 
     if verbose >= 2:
         logger.info(f"Starting training for {training_config.epochs} epochs...")
@@ -790,7 +781,6 @@ def kfold_train(
     model: nn.Module | SklearnClassifier,
     training_config: TrainingConfig,
     device: str,
-    use_multiple_gpu: bool = True,
 ):
     """
     Perform K-Fold Cross Validation training on the provided DataFrame using the specified model and training configuration.
@@ -824,7 +814,6 @@ def kfold_train(
             model=model,
             training_config=training_config,
             device=device,
-            use_multiple_gpu=use_multiple_gpu,
             val_df=val_df,
             verbose=1,
             progressbar_description=f"Fold {fold + 1}/{training_config.k_folds_cv}",
@@ -969,7 +958,6 @@ if __name__ == "__main__":
             model,
             training_config=config.training_config,
             device=device,
-            use_multiple_gpu=False,
         )
         train_time = time.perf_counter() - t
 
@@ -1006,7 +994,11 @@ if __name__ == "__main__":
                 yaml.dump(config.raw_dict, f)
             logger.info(f"Training config saved to: {training_config_path}")
 
-            stats_path = os.path.join(config.output_dir, "stats.log")
+            stats_path = os.path.join(config.output_dir, "stats.tsv")
             with open(stats_path, "w") as f:
-                stats.log(f)
+                # Headers
+                f.write(
+                    "Date\tCommand\tDescription\tBacteria embedder\tPhages embedder\tClassifier\tEpochs\tBS\tLR\tTrain Elapsed time (s)\tTrain True Positive\tTrain False Positive\tTrain False Negative\tTrain True Negative\tTrain Accuracy\tTrain Weighted accuracy\tTrain F1 Score\tTest Elapsed time (s)\tTest True Positive\tTest False Positive\tTest False Negative\tTest True Negative\tTest Accuracy\tTest Weighted accuracy\tTest F1 Score"
+                )
+                stats.log(lambda msg: f.write(msg + "\n"))
             logger.info(f"Run stats saved to: {stats_path}")
