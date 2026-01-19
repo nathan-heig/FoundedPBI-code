@@ -6,11 +6,11 @@ micromamba activate -n pbi
 # Settings
 # ===============================================
 repeats=1
-max_jobs=60
+max_jobs=20
 csv_file=./gridsearch_1.csv
 # Only -1 is working for now...
 random_samples=-1 # -1 For gridsearch
-config_file=./model_configs/env_var_example.yaml
+config_file=./model_configs/pbip_datasets_env.yaml
 
 
 # ===============================================
@@ -28,9 +28,12 @@ echo 0 > "$progress_file"
 # Environment variables that will be explored
 # Each key maps to a list of possible values (space-separated)
 declare -A param_grid=(
-    [LR]="1e-2 1e-3 1e-4"
-    [WD]="0 1e-5 1e-4 1e-3"
-    [DROPOUT]="0 0.1 0.2 0.3 0.4"
+    [MERGINGSTRATEGYPHAGESNT2]="TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+    [MERGINGSTRATEGYPHAGESMEGADNA]="TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+    [MERGINGSTRATEGYPHAGESDNABERT]="TopBottomTruncateStrategy MaxStrategy TKPertStrategy"
+    [MERGINGSTRATEGYBACTNT2]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy"
+    [MERGINGSTRATEGYBACTMEGADNA]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy"
+    [MERGINGSTRATEGYBACTDNABERT]="TruncateStrategy BottomTruncateStrategy TopBottomTruncateStrategy"
 )
 
 # declare -A param_grid=(
