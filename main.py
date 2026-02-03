@@ -16,7 +16,7 @@ from pbi_utils.data_manager import (
 from pbi_utils.logging import Logging, INFO, DEBUG
 from pbi_models.embedders.abstract_model import AbstractModel
 from typing import Literal, Tuple, List
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import KFold, train_test_split, GroupKFold, StratifiedGroupKFold
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
@@ -411,6 +411,7 @@ def train_model(
     val_df: pd.DataFrame | None = None,
     verbose: int = 2,
     progressbar_description: str = "",
+    pos_weight: float = 1.0,
 ) -> np.ndarray:
     """
     Train a model (either a PyTorch nn.Module or a SklearnClassifier) using the provided training DataFrame. Optionally, a validation DataFrame can be provided for evaluation during training.
@@ -442,6 +443,7 @@ def train_model(
             val_df,
             verbose,
             progressbar_description,
+            pos_weight
         )
 
     else:
@@ -511,6 +513,7 @@ def train_nn_model(
     val_df: pd.DataFrame | None = None,
     verbose: int = 2,
     progressbar_description: str = "",
+    pos_weight: float = 1.0,
 ) -> np.ndarray:
     """
     Train a PyTorch nn.Module model using the provided training DataFrame. Optionally, a validation DataFrame can be provided for evaluation during training.
@@ -529,7 +532,9 @@ def train_nn_model(
         lr=training_config.learning_rate,
         weight_decay=training_config.weight_decay,
     )
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    class_weights = torch.tensor([1.0, float(pos_weight)], device=device)
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
@@ -557,6 +562,8 @@ def train_nn_model(
     epochs_no_improve = 0
     best_model_state = None
 
+    NOISE_STD = 0.05
+
     # Typical torch training loop
     with tqdm(
         range(training_config.epochs),
@@ -569,9 +576,23 @@ def train_nn_model(
             train_loss = 0.0
             for bact_emb, phg_emb, labels in dataloader:  # each [batch, emb_dim]
                 optimizer.zero_grad()
-                logits = model(bact_emb, phg_emb)
+                if model.training:
+                    # Create noise tensors with the same shape as embeddings
+                    bact_noise = torch.randn_like(bact_emb) * NOISE_STD
+                    phg_noise = torch.randn_like(phg_emb) * NOISE_STD
+                    
+                    # Add noise to the inputs
+                    bact_emb_noisy = bact_emb + bact_noise
+                    phg_emb_noisy = phg_emb + phg_noise
+                else:
+                    bact_emb_noisy = bact_emb
+                    phg_emb_noisy = phg_emb
+
+                logits = model(bact_emb_noisy, phg_emb_noisy)
+                
                 loss = criterion(logits, labels)
                 loss.backward()
+
                 optimizer.step()
                 train_loss += loss.item() * bact_emb.size(0)
 
@@ -797,16 +818,36 @@ def kfold_train(
     :type use_multiple_gpu: bool
     """
 
-    kfold = KFold(n_splits=training_config.k_folds_cv, shuffle=True, random_state=42)
+    # kfold = KFold(n_splits=training_config.k_folds_cv, shuffle=True, random_state=42)
+    # gkf = GroupKFold(n_splits=training_config.k_folds_cv)
+    sgkf = StratifiedGroupKFold(n_splits=training_config.k_folds_cv)
+    groups = df["bacterium_id"].values
+
+    y = df["interaction_type"].values
+
     all_conf_matrices = []
 
     logger.info(f"Starting {training_config.k_folds_cv}-Fold Cross Validation...")
 
-    for fold, (train_idx, val_idx) in enumerate(kfold.split(df)):
+    # for fold, (train_idx, val_idx) in enumerate(kfold.split(df)):
+    # for fold, (train_idx, val_idx) in enumerate(gkf.split(df, groups=groups)):
+    for fold, (train_idx, val_idx) in enumerate(sgkf.split(df, y=y, groups=groups)):
         logger.debug(f"Starting fold {fold + 1}...")
         train_df = df.iloc[train_idx].reset_index(drop=True)
         val_df = df.iloc[val_idx].reset_index(drop=True)
 
+        num_neg_train = (train_df["interaction_type"] == 0).sum()
+        num_pos_train = (train_df["interaction_type"] == 1).sum()
+        
+        num_neg_val = (val_df["interaction_type"] == 0).sum()
+        num_pos_val = (val_df["interaction_type"] == 1).sum()
+
+        curr_pos_weight = num_neg_train / num_pos_train if num_pos_train > 0 else 1.0
+
+        # logger.info(f"--- Fold {fold + 1} Stats ---")
+        # logger.info(f"Train: {num_neg_train} Neg, {num_pos_train} Pos. Weight applied: {curr_pos_weight:.2f}")
+        # logger.info(f"Val:   {num_neg_val} Neg, {num_pos_val} Pos.")
+        
         model.reset_model(device)
 
         train_model(
@@ -817,6 +858,7 @@ def kfold_train(
             val_df=val_df,
             verbose=1,
             progressbar_description=f"Fold {fold + 1}/{training_config.k_folds_cv}",
+            pos_weight=curr_pos_weight
         )
 
         # Evaluate model on validation fold
@@ -921,9 +963,32 @@ if __name__ == "__main__":
             config.training_config.n_components_phages,
         )
 
-        train, test = train_test_split(
-            dataset, test_size=0.2, random_state=42, shuffle=True
+        train = dataset
+
+        # train, test = train_test_split(
+        #     dataset, test_size=0.2, random_state=42, shuffle=True
+        # )
+
+        # Hardcode the path to the test dataset file
+        TEST_DATASET_PATH = "data/perphect-data/predphi/predphi_test_dataset.csv" 
+        logger.info(f"Using hardcoded test set from: {TEST_DATASET_PATH}")
+
+        test_couples_df = pd.read_csv(TEST_DATASET_PATH) 
+
+        test = make_dataset(
+            test_couples_df, bacteria_model_names, phages_model_names, output_manager, device
         )
+
+        test = reduce_dimensionality(
+            test,
+            config.training_config.reduce_dimensionality,
+            config.output_dir,
+            config.training_config.n_components_bacteria,
+            config.training_config.n_components_phages,
+        )
+
+        train = train.sample(frac=1, random_state=42).reset_index(drop=True)
+        test = test.sample(frac=1, random_state=42).reset_index(drop=True)
 
         # TODO: Only for testing purposes, remove later
         # dataset = dataset.sample(frac=1, random_state=42).reset_index(drop=True)

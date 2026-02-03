@@ -7,7 +7,7 @@ input_perphect:
 
 embeddings_dir: data/embeddings-pbip
 output_dir: output/pbip/ # Comment line to disable output
-num_gpu: 1
+num_gpu: 0
 gpu_id: 3
 # torch_num_threads: 1
 
@@ -74,18 +74,18 @@ bacteria_embedding_models:
 # classifier: $CLASSIFIER
 
 classifier: 
-  name: MLPClassifier
-  params:
-    bacterium_mlp_sizes: [256, 128, 64]
-    phage_mlp_sizes: [256, 128, 64]
-    dense_dim: 128
-    dropout: 0.4
+  # name: MLPClassifier
+  # params:
+  #   bacterium_mlp_sizes: [256, 128, 64]
+  #   phage_mlp_sizes: [256, 128, 64]
+  #   dense_dim: 128
+  #   dropout: 0.4
 
-# classifier: 
-#   name: BasicMLPClassifier
-#   params:
-#     mlp_params: [256, 128]
-#     dropout: 0.4
+classifier: 
+  name: BasicMLPClassifier
+  params:
+    mlp_params: [128, 64]
+    dropout: 0.4
 
 # classifier:
 #   name: LinearClassifier
