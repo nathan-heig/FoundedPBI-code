@@ -41,7 +41,8 @@ pbi/
 ├── model_configs/ # YAML configuration files provided as an example. They are used to define all the parameters for each run.
 │   ├── example.yaml # Example config with details on all the possible parameters.
 │   ├── base.yaml # Basic execution config to use as test.
-│   └── best_model.yaml # Best configuration found during the project.
+│   ├── best_model_pbip_datasets.yaml # Configuration of the best model found during the project for the PredPHI data.
+│   └── best_model.yaml # Best configuration found during the project for the CI4CB data.
 ├── pbi_models/ # Implementation of the different classifiers and embedding models.
 │   ├── classifiers/ # Classifiers implementation.
 │   │   ├── abstract_classifier.py # Abstract classifier class. All the others should inherit from this class, to provide a stable API.
@@ -166,6 +167,9 @@ To run the best model found during the project, assuming that all the required e
 ```bash
 python main.py -c model_configs/best_model.yaml
 ```
+
+> [!TIP]
+> To test a trained model on a custom dataset, you can use the `analysis/model_testing.ipynb` jupyter notebook.
 
 ## Available Models
 The following models are implemented and can be used in the framework.

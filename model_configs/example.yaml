@@ -18,15 +18,19 @@ torch_num_threads: -1 # Number of threads to use for PyTorch operations. Default
 
 training_config:
   do_train: true # Whether to train the model. If false, only compute the embeddings and exit. Default is true.
+  do_test: true # Whether to test the model after training. If false, use all dataset to train the model, do not evaluate the model on the test set and exit after training. Default is true.
   epochs: 10 # Number of training epochs. Default is 10.
   learning_rate: 1e-3 # Learning rate for the optimizer. Default is 1e-3.
   weight_decay: 1e-4 # Weight decay (L2 regularization) for the optimizer. Default is 1e-4.
   batch_size: 128 # Batch size for training. Default is 128.
 
+  training_noise_std: 0.05 # STD of the noise that is added during training to the embeddings. If 0, do not add noise. Default is 0.05. Adding noise can help to regularize the model and improve its generalization, but it can also make training more difficult.
+
   reduce_dimensionality: "none" # The dimensionality reduction technique to apply to the merged embeddings. If "none", do not use any. Can be either "none" or PCA. Default is "none".
   n_components_bacteria: null # Number of components to keep when reducing the dimensionality of bacteria embeddings. Only used if reduce_dimensionality is not "none". Default is null (keep all components).
   n_components_phages: null # Number of components to keep when reducing the dimensionality of phage embeddings. Only used if reduce_dimensionality is not "none". Default is null (keep all components).
 
+  stratify_cv: false # Whether to stratify the folds in cross validation. If true, each fold will contain all the interactions for an exclusive subset of all the phages. If false, the folds will be created randomly on the interactions level. Default is false.
   k_folds_cv: 3 # Number of folds for k-fold cross-validation. Default is 3. Must be >= 2.
 
   patience_early_stopping: 1000 # Number of epochs with no improvement after which training will be stopped. Default is 1000. To disable early stopping, set this to a very high value.
