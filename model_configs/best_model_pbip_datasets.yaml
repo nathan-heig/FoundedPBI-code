@@ -14,13 +14,9 @@ training_config:
   learning_rate: 1e-3
   batch_size: 256
 
-  # reduce_dimensionality: PCA
-  # n_components_bacteria: 382
-  # n_components_phages: 382
-
   training_noise_std: 0.05
 
-  stratify_cv: false
+  stratify_cv: true
   k_folds_cv: 10
 
 phages_embedding_models:
