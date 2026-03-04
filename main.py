@@ -562,8 +562,6 @@ def train_nn_model(
     epochs_no_improve = 0
     best_model_state = None
 
-    NOISE_STD = 0.05
-
     # Typical torch training loop
     with tqdm(
         range(training_config.epochs),
@@ -576,10 +574,10 @@ def train_nn_model(
             train_loss = 0.0
             for bact_emb, phg_emb, labels in dataloader:  # each [batch, emb_dim]
                 optimizer.zero_grad()
-                if model.training:
+                if model.training and training_config.training_noise_std != 0:
                     # Create noise tensors with the same shape as embeddings
-                    bact_noise = torch.randn_like(bact_emb) * NOISE_STD
-                    phg_noise = torch.randn_like(phg_emb) * NOISE_STD
+                    bact_noise = torch.randn_like(bact_emb) * training_config.training_noise_std
+                    phg_noise = torch.randn_like(phg_emb) * training_config.training_noise_std
                     
                     # Add noise to the inputs
                     bact_emb_noisy = bact_emb + bact_noise
@@ -818,30 +816,29 @@ def kfold_train(
     :type use_multiple_gpu: bool
     """
 
-    # kfold = KFold(n_splits=training_config.k_folds_cv, shuffle=True, random_state=42)
-    # gkf = GroupKFold(n_splits=training_config.k_folds_cv)
-    sgkf = StratifiedGroupKFold(n_splits=training_config.k_folds_cv)
-    groups = df["bacterium_id"].values
-
-    y = df["interaction_type"].values
-
+    if training_config.stratify_cv:
+        sgkf = StratifiedGroupKFold(n_splits=training_config.k_folds_cv) # To make sure that the validation dataset contains only unknown phages
+        groups = df["phage_id"].values
+        y = df["interaction_type"].values
+        splits = sgkf.split(df, y=y, groups=groups)
+        
+    else:
+        kfold = KFold(n_splits=training_config.k_folds_cv, shuffle=True, random_state=42)
+        splits = kfold.split(df)
+        
     all_conf_matrices = []
 
     logger.info(f"Starting {training_config.k_folds_cv}-Fold Cross Validation...")
 
-    # for fold, (train_idx, val_idx) in enumerate(kfold.split(df)):
-    # for fold, (train_idx, val_idx) in enumerate(gkf.split(df, groups=groups)):
-    for fold, (train_idx, val_idx) in enumerate(sgkf.split(df, y=y, groups=groups)):
+    for fold, (train_idx, val_idx) in enumerate(splits):
         logger.debug(f"Starting fold {fold + 1}...")
         train_df = df.iloc[train_idx].reset_index(drop=True)
         val_df = df.iloc[val_idx].reset_index(drop=True)
 
         num_neg_train = (train_df["interaction_type"] == 0).sum()
         num_pos_train = (train_df["interaction_type"] == 1).sum()
-        
-        num_neg_val = (val_df["interaction_type"] == 0).sum()
-        num_pos_val = (val_df["interaction_type"] == 1).sum()
-
+        # num_neg_val = (val_df["interaction_type"] == 0).sum()
+        # num_pos_val = (val_df["interaction_type"] == 1).sum()
         curr_pos_weight = num_neg_train / num_pos_train if num_pos_train > 0 else 1.0
 
         # logger.info(f"--- Fold {fold + 1} Stats ---")
@@ -872,7 +869,7 @@ def kfold_train(
 
         all_conf_matrices.append(cm_mat)
 
-    mean_cm: np.ndarray = sum(all_conf_matrices) / len(all_conf_matrices)  # type: ignore
+    mean_cm: np.ndarray = sum(all_conf_matrices) / len(all_conf_matrices)
     # tp, fp, fn, tn = mean_cm[0][0], mean_cm[0][1], mean_cm[1][0], mean_cm[1][1]
     tn, fp, fn, tp = mean_cm.ravel().tolist()
     acc, rec, f1 = compute_metrics(tn, fp, fn, tp)
@@ -908,7 +905,7 @@ if __name__ == "__main__":
         required=False,
         default=None,
         type=str,
-        help="Alternative way to set config. Recieves the entire json as a parameter.",
+        help="Alternative way to set config. Recieves the entire json as an argument.",
     )
     cli_args = parser.parse_args()
     assert (
@@ -962,35 +959,36 @@ if __name__ == "__main__":
             config.training_config.n_components_bacteria,
             config.training_config.n_components_phages,
         )
-
-        train = dataset
-
-        # train, test = train_test_split(
-        #     dataset, test_size=0.2, random_state=42, shuffle=True
-        # )
+        
+        if config.training_config.do_test:
+            train, test = train_test_split(
+                dataset, test_size=0.2, random_state=42, shuffle=True
+            )
+        else:
+            train = dataset
 
         # Hardcode the path to the test dataset file
-        TEST_DATASET_PATH = "data/perphect-data/predphi/predphi_test_dataset.csv" 
-        logger.info(f"Using hardcoded test set from: {TEST_DATASET_PATH}")
+        # TEST_DATASET_PATH = "data/perphect-data/predphi/predphi_test_dataset.csv" 
+        # logger.info(f"Using hardcoded test set from: {TEST_DATASET_PATH}")
 
-        test_couples_df = pd.read_csv(TEST_DATASET_PATH) 
+        # test_couples_df = pd.read_csv(TEST_DATASET_PATH)
+        
+        # test = make_dataset(
+        #     test_couples_df, bacteria_model_names, phages_model_names, output_manager, device
+        # )
 
-        test = make_dataset(
-            test_couples_df, bacteria_model_names, phages_model_names, output_manager, device
-        )
+        # test = reduce_dimensionality(
+        #     test,
+        #     config.training_config.reduce_dimensionality,
+        #     config.output_dir,
+        #     config.training_config.n_components_bacteria,
+        #     config.training_config.n_components_phages,
+        # )
 
-        test = reduce_dimensionality(
-            test,
-            config.training_config.reduce_dimensionality,
-            config.output_dir,
-            config.training_config.n_components_bacteria,
-            config.training_config.n_components_phages,
-        )
+        # train = dataset.sample(frac=1, random_state=42).reset_index(drop=True)
+        # test = test.sample(frac=1, random_state=42).reset_index(drop=True)
 
-        train = train.sample(frac=1, random_state=42).reset_index(drop=True)
-        test = test.sample(frac=1, random_state=42).reset_index(drop=True)
-
-        # TODO: Only for testing purposes, remove later
+        # Only for testing purposes
         # dataset = dataset.sample(frac=1, random_state=42).reset_index(drop=True)
         # Select 250 random phages for testing
         # test_phag_ids = dataset["phage_id"].drop_duplicates().sample(n=250, random_state=25).to_list()
@@ -1003,7 +1001,7 @@ if __name__ == "__main__":
         # test = dataset[dataset["bacterium_id"].isin(test_bact_ids)].reset_index(drop=True)
 
         logger.info(f"Train dataset size: {len(train)}")
-        logger.info(f"Test dataset size: {len(test)}")
+        logger.info(f"Test dataset size: {len(test) if config.training_config.do_test else 'N/A'}")
 
         stats = Stats(config)
 
@@ -1017,26 +1015,35 @@ if __name__ == "__main__":
         stats.update_classifier(model)
 
         t = time.perf_counter()
-        # cm = train_model(train, model, batch_size=config.batch_size, learning_rate=config.learning_rate, epochs=config.epochs, device=device, use_multiple_gpu=False)
-        cm = kfold_train(
-            train,
-            model,
-            training_config=config.training_config,
-            device=device,
-        )
+        
+        if config.training_config.k_folds_cv <= 1:
+            cm = train_model(
+                train,
+                model,
+                training_config=config.training_config,
+                device=device,
+                verbose=1,
+                progressbar_description="Training...",
+            )
+        else:
+            cm = kfold_train(
+                train,
+                model,
+                training_config=config.training_config,
+                device=device,
+            )
         train_time = time.perf_counter() - t
 
         stats.update_train_results(cm, train_time)
+        
+        if config.training_config.do_test:
+            t = time.perf_counter()
+            cm, _ = test_model(
+                test, model, batch_size=config.training_config.batch_size, device=device
+            )
+            test_time = time.perf_counter() - t
 
-        t = time.perf_counter()
-        cm, _ = test_model(
-            test, model, batch_size=config.training_config.batch_size, device=device
-        )
-        test_time = time.perf_counter() - t
-
-        stats.update_test_results(cm, test_time)
-
-        # stats.log(logger.info)
+            stats.update_test_results(cm, test_time)
 
         # Save the trained model
         if config.output_dir is not None:

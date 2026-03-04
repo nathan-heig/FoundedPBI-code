@@ -81,10 +81,13 @@ class TrainingConfig(BaseModel):
 
     Attributes:
         do_train (bool): If false, do not train or test the model, just compute the embeddings.
+        do_test (bool): If false, do not test the model after training.
         epochs (int): Number of epochs to train the classifier model.
         batch_size (int): Batch size to use for training and testing of the classifier.
         learning_rate (float): Learning rate to use for training with Adam optimizer.
         weight_decay (float): L2 Regularization for Adam optimizer.
+        stratify_cv (bool): Whether to stratify the folds in cross validation. If true, each fold will contain all the interactions for an exclusive subset of all the phages. If false, the folds will be created randomly on the interactions level.
+        training_noise_std (float): STD of the noise that is added during training to the embeddings. If 0, do not add noise.
         k_folds_cv (int): Train the classifier model using `k_folds`-Fold cross validation.
         patience_early_stopping (int): Number of epochs to wait without performance increase before the training is interrupted.
         monitor_metric_early_stopping (Literal["f1", "loss"]): The metric to decide wether the model is performing better or not.
@@ -97,11 +100,14 @@ class TrainingConfig(BaseModel):
     """
 
     do_train: bool = True
+    do_test: bool = True
     epochs: int = 10
     batch_size: int = 128
     learning_rate: float = 1e-3
     weight_decay: float = 1e-4
+    training_noise_std: float = 0.05
 
+    stratify_cv: bool = False
     k_folds_cv: int = 3
 
     patience_early_stopping: int = 1000
