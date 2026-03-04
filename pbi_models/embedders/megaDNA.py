@@ -42,7 +42,9 @@ class MegaDNA(AbstractModel):
             self.model = torch.load(weights_path, map_location=torch.device(device))
             self.model.eval()
             self.max_seq_len = reduce(lambda x, y: x * y, self.model.max_seq_len) - 1
-            logger.debug(f"[MegaDNA] Max sequence length for megaDNA: {self.max_seq_len}")
+            logger.debug(
+                f"[MegaDNA] Max sequence length for megaDNA: {self.max_seq_len}"
+            )
 
         self.merging_strategy = merging_strategy
         self.overlap = int(overlap)

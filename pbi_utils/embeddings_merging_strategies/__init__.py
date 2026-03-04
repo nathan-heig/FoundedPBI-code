@@ -6,7 +6,6 @@ from pbi_utils.embeddings_merging_strategies.abstract_merger_strategy import (
     AbstractMergerStrategy,
 )
 
-
 # Dynamically import all the strategies in this folder, so they are available when importing the package
 # It is usually not a good practice to modify the globals() or __all__, but in this case I use it so that the main file does not have to be changed each time a new strategy is added
 __all__ = []

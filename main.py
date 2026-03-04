@@ -16,7 +16,12 @@ from pbi_utils.data_manager import (
 from pbi_utils.logging import Logging, INFO, DEBUG
 from pbi_models.embedders.abstract_model import AbstractModel
 from typing import Literal, Tuple, List
-from sklearn.model_selection import KFold, train_test_split, GroupKFold, StratifiedGroupKFold
+from sklearn.model_selection import (
+    KFold,
+    train_test_split,
+    GroupKFold,
+    StratifiedGroupKFold,
+)
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
@@ -443,7 +448,7 @@ def train_model(
             val_df,
             verbose,
             progressbar_description,
-            pos_weight
+            pos_weight,
         )
 
     else:
@@ -524,7 +529,7 @@ def train_nn_model(
     dataloader = dataframe_to_tf_dataloader(
         train_df, batch_size=training_config.batch_size, device=device
     )
-    
+
     model.to(device)
 
     optimizer = torch.optim.Adam(
@@ -551,7 +556,6 @@ def train_nn_model(
     f1 = tm.F1Score(task="binary").to(device)
     cm = tm.ConfusionMatrix(task="binary").to(device)
 
-
     if verbose >= 2:
         logger.info(f"Starting training for {training_config.epochs} epochs...")
 
@@ -576,9 +580,13 @@ def train_nn_model(
                 optimizer.zero_grad()
                 if model.training and training_config.training_noise_std != 0:
                     # Create noise tensors with the same shape as embeddings
-                    bact_noise = torch.randn_like(bact_emb) * training_config.training_noise_std
-                    phg_noise = torch.randn_like(phg_emb) * training_config.training_noise_std
-                    
+                    bact_noise = (
+                        torch.randn_like(bact_emb) * training_config.training_noise_std
+                    )
+                    phg_noise = (
+                        torch.randn_like(phg_emb) * training_config.training_noise_std
+                    )
+
                     # Add noise to the inputs
                     bact_emb_noisy = bact_emb + bact_noise
                     phg_emb_noisy = phg_emb + phg_noise
@@ -587,7 +595,7 @@ def train_nn_model(
                     phg_emb_noisy = phg_emb
 
                 logits = model(bact_emb_noisy, phg_emb_noisy)
-                
+
                 loss = criterion(logits, labels)
                 loss.backward()
 
@@ -817,15 +825,19 @@ def kfold_train(
     """
 
     if training_config.stratify_cv:
-        sgkf = StratifiedGroupKFold(n_splits=training_config.k_folds_cv) # To make sure that the validation dataset contains only unknown phages
+        sgkf = StratifiedGroupKFold(
+            n_splits=training_config.k_folds_cv
+        )  # To make sure that the validation dataset contains only unknown phages
         groups = df["phage_id"].values
         y = df["interaction_type"].values
         splits = sgkf.split(df, y=y, groups=groups)
-        
+
     else:
-        kfold = KFold(n_splits=training_config.k_folds_cv, shuffle=True, random_state=42)
+        kfold = KFold(
+            n_splits=training_config.k_folds_cv, shuffle=True, random_state=42
+        )
         splits = kfold.split(df)
-        
+
     all_conf_matrices = []
 
     logger.info(f"Starting {training_config.k_folds_cv}-Fold Cross Validation...")
@@ -844,7 +856,7 @@ def kfold_train(
         # logger.info(f"--- Fold {fold + 1} Stats ---")
         # logger.info(f"Train: {num_neg_train} Neg, {num_pos_train} Pos. Weight applied: {curr_pos_weight:.2f}")
         # logger.info(f"Val:   {num_neg_val} Neg, {num_pos_val} Pos.")
-        
+
         model.reset_model(device)
 
         train_model(
@@ -855,7 +867,7 @@ def kfold_train(
             val_df=val_df,
             verbose=1,
             progressbar_description=f"Fold {fold + 1}/{training_config.k_folds_cv}",
-            pos_weight=curr_pos_weight
+            pos_weight=curr_pos_weight,
         )
 
         # Evaluate model on validation fold
@@ -959,7 +971,7 @@ if __name__ == "__main__":
             config.training_config.n_components_bacteria,
             config.training_config.n_components_phages,
         )
-        
+
         if config.training_config.do_test:
             train, test = train_test_split(
                 dataset, test_size=0.2, random_state=42, shuffle=True
@@ -968,11 +980,11 @@ if __name__ == "__main__":
             train = dataset
 
         # Hardcode the path to the test dataset file
-        # TEST_DATASET_PATH = "data/perphect-data/predphi/predphi_test_dataset.csv" 
+        # TEST_DATASET_PATH = "data/perphect-data/predphi/predphi_test_dataset.csv"
         # logger.info(f"Using hardcoded test set from: {TEST_DATASET_PATH}")
 
         # test_couples_df = pd.read_csv(TEST_DATASET_PATH)
-        
+
         # test = make_dataset(
         #     test_couples_df, bacteria_model_names, phages_model_names, output_manager, device
         # )
@@ -1001,7 +1013,9 @@ if __name__ == "__main__":
         # test = dataset[dataset["bacterium_id"].isin(test_bact_ids)].reset_index(drop=True)
 
         logger.info(f"Train dataset size: {len(train)}")
-        logger.info(f"Test dataset size: {len(test) if config.training_config.do_test else 'N/A'}")
+        logger.info(
+            f"Test dataset size: {len(test) if config.training_config.do_test else 'N/A'}"
+        )
 
         stats = Stats(config)
 
@@ -1015,7 +1029,7 @@ if __name__ == "__main__":
         stats.update_classifier(model)
 
         t = time.perf_counter()
-        
+
         if config.training_config.k_folds_cv <= 1:
             cm = train_model(
                 train,
@@ -1035,7 +1049,7 @@ if __name__ == "__main__":
         train_time = time.perf_counter() - t
 
         stats.update_train_results(cm, train_time)
-        
+
         if config.training_config.do_test:
             t = time.perf_counter()
             cm, _ = test_model(

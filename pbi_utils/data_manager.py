@@ -252,8 +252,9 @@ class H5pyEmbeddingsManager(EmbeddingsManager):
 
     def has_key(self, id: int, model_name: str) -> bool:
         filepath = os.path.join(self.base_path, model_name + ".h5")
-        
-        if not os.path.isfile(filepath): return False
+
+        if not os.path.isfile(filepath):
+            return False
 
         id = str(id)  # type: ignore
         with h5py.File(filepath, "r") as f:

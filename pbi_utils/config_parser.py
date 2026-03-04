@@ -149,9 +149,7 @@ class YAMLConfig(BaseModel):
         default_factory=lambda: ClassifierConfig(name="LinearClassifier", params={})
     )
     torch_num_threads: int = -1
-    training_config: TrainingConfig = Field(
-        default_factory=TrainingConfig
-    )
+    training_config: TrainingConfig = Field(default_factory=TrainingConfig)
     output_dir: str | None = None
 
 
