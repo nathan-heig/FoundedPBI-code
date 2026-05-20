@@ -29,3 +29,13 @@ class TopBottomTruncateStrategy(AbstractMergerStrategy):
 
     def merge(self, sentences: list[str], embeddings: torch.Tensor) -> torch.Tensor:
         return torch.cat([embeddings[0], embeddings[-1]], dim=0).unsqueeze(0)
+
+
+class TopBottomTruncateStrategy2(TopBottomTruncateStrategy):
+    pass
+
+
+class TopMiddleBottomStrategy(AbstractMergerStrategy):
+    
+    def merge(self, sentences: list[str], embeddings: torch.Tensor) -> torch.Tensor:
+        return torch.cat([embeddings[0], embeddings[len(embeddings)//2], embeddings[-1]], dim=0).unsqueeze(0)

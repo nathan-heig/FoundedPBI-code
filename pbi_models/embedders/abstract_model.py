@@ -59,6 +59,10 @@ class AbstractModel(ABC):
             sequences = [sequences[-1]]
         elif self.merging_strategy.name() == "TopBottomTruncateStrategy":
             sequences = [sequences[0], sequences[-1]]
+        elif self.merging_strategy.name() == "TopBottomTruncateStrategy2":
+            sequences = [sequences[0], dna_sequence[-self.max_seq_len:]]
+        if self.merging_strategy.name() == "TopMiddleBottomStrategy":
+            sequences = [sequences[0], sequences[len(sequences)//2], sequences[-1]]
 
         # Get embeddings for each subsequence
         tokens = self._encode(sequences)

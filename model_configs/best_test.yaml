@@ -21,44 +21,17 @@ training_config:
 
 phages_embedding_models:
   - name: NT2
-    params: 
+    params:
       model_name: nucleotide-transformer-v2-250m-multi-species
-    strategy: TopBottomTruncateStrategy
-    use_cached_embeddings: true
-
-  - name: MegaDNA
-    params: 
-      weights_path: data/weights/megaDNA_phage_145M.pt
-      get_layer: concat
-    strategy: TopBottomTruncateStrategy
-    use_cached_embeddings: true
-
-  - name: DNABERT2
-    params: 
-      source_code_path: DNABERT-2-117M/
-      max_seq_len: 16384
-    strategy: TKPertStrategy
+    strategy: TopBottomTruncateStrategy2
     use_cached_embeddings: true
 
 bacteria_embedding_models:
-  - name: NT2
-    params: 
-      model_name: nucleotide-transformer-v2-250m-multi-species
-    strategy: TruncateStrategy
-    use_cached_embeddings: true
-
   - name: MegaDNA
     params: 
       weights_path: data/weights/megaDNA_phage_145M.pt
       get_layer: concat
     strategy: TruncateStrategy
-    use_cached_embeddings: true
-
-  - name: DNABERT2
-    params: 
-      source_code_path: DNABERT-2-117M/
-      max_seq_len: 16384
-    strategy: BottomTruncateStrategy
     use_cached_embeddings: true
 
 
