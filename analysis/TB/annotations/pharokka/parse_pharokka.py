@@ -30,23 +30,6 @@ PHROG_CATS = ["head and packaging", "connector", "tail", "lysis",
               "DNA, RNA and nucleotide metabolism",
               "moron, auxiliary metabolic gene and host takeover"]
 
-# Genes "marqueurs" reperes par mot-cle dans l'annotation fonctionnelle (presence binaire).
-KEY_GENES = {
-    "integrase":      r"integrase",
-    "terminase":      r"terminase",
-    "major_capsid":   r"major capsid",
-    "portal":         r"portal",
-    "tail_fiber":     r"tail fib",
-    "baseplate":      r"baseplate",
-    "holin":          r"holin",
-    "endolysin":      r"endolysin|lysin",
-    "dna_polymerase": r"dna polymerase",
-    "rna_polymerase": r"rna polymerase",
-    "primase":        r"primase",
-    "helicase":       r"helicase",
-    "recombinase":    r"recombinase",
-}
-
 
 def main():
     # 1) Comptes par categorie PHROG (format long -> matrice large)
@@ -58,19 +41,7 @@ def main():
             if c in mat.columns]
     out = mat[keep].copy()
 
-    # 2) Presence de genes marqueurs (depuis l'annotation par gene)
-    g = pd.read_csv(f"{OUT}/pharokka_cds_final_merged_output.tsv", sep="\t",
-                    usecols=["contig", "annot"])
-    g["annot"] = g["annot"].fillna("").str.lower()
-    for name, pat in KEY_GENES.items():
-        hits = g.loc[g["annot"].str.contains(pat, regex=True), "contig"].unique()
-        out[f"has_{name}"] = out.index.isin(hits).astype(int)
-
-    # 3) Label derive binaire : phage probablement temperateur (lysogenie)
-    out["temperate"] = ((out.get("integration and excision", 0) > 0) |
-                        (out["has_integrase"] == 1)).astype(int)
-
-    # 4) Labels FINS : presence (0/1) de chaque fonction nommee et de chaque famille PHROG
+    # 2) Labels FINS : presence (0/1) de chaque fonction nommee et de chaque famille PHROG
     #    presentes dans >= MIN_PHAGES phages -> vocabulaire riche pour nommer les latents SAE.
     gg = pd.read_csv(f"{OUT}/pharokka_cds_final_merged_output.tsv", sep="\t",
                      usecols=["contig", "phrog", "annot"])
@@ -107,10 +78,6 @@ def main():
     for c in PHROG_CATS:
         if c in out.columns:
             print(f"  {c:55s} : {(out[c] > 0).mean()*100:5.1f}%")
-    print("\nGenes marqueurs (presence) :")
-    for name in KEY_GENES:
-        print(f"  has_{name:15s} : {out[f'has_{name}'].mean()*100:5.1f}%")
-    print(f"\n  temperate (lysogenie probable) : {out['temperate'].mean()*100:.1f}%")
     cats = [c for c in PHROG_CATS if c in out.columns]
     print(f"  phages sans aucun gene de categorie nommee : "
           f"{(out[cats].sum(axis=1) == 0).mean()*100:.1f}%")

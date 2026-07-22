@@ -4,6 +4,9 @@
 Une vraie bacterie doit avoir une division taxonomique 'Bacteria' ; un vrai phage
 'Phages' (ou 'Viruses'). Tout le reste (mitochondries, genes isoles...) est flagge.
 Les IDs predphi sont des accessions NCBI -> interrogeables directement.
+
+La partie biologie de ce script depasse ce que je connais en informatique.
+Je me suis aide d'une IA (Claude, Anthropic) pour l'ecrire.
 """
 import json, time, urllib.request, urllib.parse, os
 import xml.etree.ElementTree as ET
