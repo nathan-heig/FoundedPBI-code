@@ -1,0 +1,302 @@
+id,taxid,superkingdom,organism,title,valid
+NC_023543,9929,Eukaryota,Damaliscus lunatus,"Damaliscus lunatus mitochondrion, complete genome",False
+AP009493,455632,Bacteria,Streptomyces griseus subsp. griseus NBRC 13350,"Streptomyces griseus subsp. griseus NBRC 13350 DNA, complete genome",True
+NZ_KI421518,928723,Bacteria,Sinorhizobium meliloti BO21CC,"Sinorhizobium meliloti BO21CC SinmeBODRAFT_scaffold1.1, whole genome shotgun sequence",True
+NC_000001,9606,Eukaryota,Homo sapiens,"Homo sapiens chromosome 1, GRCh38.p14 Primary Assembly",False
+PDLE01000004,582,Bacteria,Morganella morganii,"Morganella morganii strain FDAARGOS_438 pBCCDC_12.contig.3, whole genome shotgun sequence",True
+CP007793,2970906,Bacteria,Azospirillum argentinense,"Azospirillum brasilense strain Az39, complete genome",True
+CP035765,13689,Bacteria,Sphingomonas paucimobilis,"Sphingomonas paucimobilis strain AIMST S2 chromosome, complete genome",True
+MF925712,9796,Eukaryota,Equus caballus,"Equus caballus mitochondrion, complete genome",False
+NZ_JNYC01000004,1961,Bacteria,Streptomyces virginiae,"Streptomyces virginiae strain NRRL B-8091 contig4.1, whole genome shotgun sequence",True
+CP016349,691,Bacteria,Vibrio natriegens,"Vibrio natriegens strain CCUG 16373 chromosome 1, complete sequence",True
+FP236843,634500,Bacteria,Erwinia billingiae Eb661,Erwinia billingiae strain Eb661 complete chromosome,True
+POWA01000006,69218,Bacteria,Enterobacter cancerogenus,"Enterobacter cancerogenus strain FDAARGOS_232 unitig_0_quiver_quiver_pilon, whole genome shotgun sequence",True
+QUAI01000001,1833,Bacteria,Rhodococcus erythropolis,"Rhodococcus erythropolis strain ATCC 15903 DVG80_1, whole genome shotgun sequence",True
+CP010812,666,Bacteria,Vibrio cholerae,"Vibrio cholerae strain 10432-62, complete genome",True
+NZ_CM002803,388467,Bacteria,Planktothrix agardhii NIVA-CYA 126/8,"Planktothrix agardhii NIVA-CYA 126/8 chromosome, whole genome shotgun sequence",True
+NZ_QEOC01000001,33008,Bacteria,Rhodococcus globerulus,"Rhodococcus globerulus strain WS3306 Ga0215731_11, whole genome shotgun sequence",True
+CP006884,1417673,Archaea,Haloarcula hispanica N601,"Haloarcula hispanica N601 chromosome 1, complete sequence",True
+CP025095,1307,Bacteria,Streptococcus suis,"Streptococcus suis strain HN136 chromosome, complete genome",True
+NZ_ATTH01000001,1089550,Bacteria,Salisaeta longa DSM 21114,"Salisaeta longa DSM 21114 SalloDRAFT_contig1.1_C, whole genome shotgun sequence",True
+LR134303,24,Bacteria,Shewanella putrefaciens,"Shewanella putrefaciens strain NCTC12093 genome assembly, chromosome: 1",True
+CP020928,137591,Bacteria,Weissella cibaria,"Weissella cibaria strain M2 chromosome, complete genome",True
+CP000554,59922,Bacteria,Prochlorococcus marinus str. MIT 9303,"Prochlorococcus marinus str. MIT 9303, complete genome",True
+CP027541,1214915,Bacteria,Mycolicibacterium smegmatis MKD8,"Mycolicibacterium smegmatis MKD8 chromosome, complete genome",True
+LT906480,40324,Bacteria,Stenotrophomonas maltophilia,"Stenotrophomonas maltophilia strain NCTC10257 genome assembly, chromosome: 1",True
+CP007567,1208104,Bacteria,Aeromonas media WS,"Aeromonas media WS, complete genome",True
+NZ_FNRZ01000004,410332,Bacteria,Gordonia malaquae,"Gordonia malaquae strain DSM 45064, whole genome shotgun sequence",True
+CP004353,1224164,Bacteria,Corynebacterium vitaeruminis DSM 20294,"Corynebacterium vitaeruminis DSM 20294, complete genome",True
+NBTS02000002,1496,Bacteria,Clostridioides difficile,"Clostridioides difficile strain FDAARGOS_268 scf7180000000004_quiver_pilon, whole genome shotgun sequence",True
+CP001807,518766,Bacteria,Rhodothermus marinus DSM 4252,"Rhodothermus marinus DSM 4252, complete genome",True
+NC_014574,7176,Eukaryota,Culex quinquefasciatus,"Culex quinquefasciatus mitochondrion, complete genome",False
+AP017920,274,Bacteria,Thermus thermophilus,"Thermus thermophilus DNA, complete genome, strain: TMY",True
+CP028366,59843,Bacteria,Paenibacillus glucanolyticus,Paenibacillus glucanolyticus strain W10507 chromosome,True
+CP005976,1331671,Bacteria,Pseudomonas putida H8234,"Pseudomonas putida H8234, complete genome",True
+CP013753,1590,Bacteria,Lactiplantibacillus plantarum,"Lactiplantibacillus plantarum strain DF, complete genome",True
+CP002930,1069642,Bacteria,Bdellovibrio bacteriovorus str. Tiberius,"Bdellovibrio bacteriovorus str. Tiberius, complete genome",True
+CP022298,40214,Bacteria,Acinetobacter johnsonii,"Acinetobacter johnsonii strain IC001 chromosome, complete genome",True
+CALF01000071,1208664,Bacteria,Cronobacter sakazakii 696,"Cronobacter sakazakii 696 WGS project CALF00000000 data, contig Csakazakii_696, whole genome shotgun sequence",True
+CP025430,1077935,Bacteria,Paracoccus zhejiangensis,"Paracoccus zhejiangensis strain J6 chromosome, complete genome",True
+CP003184,1094508,Bacteria,Thermoanaerobacterium saccharolyticum JW/SL-YS485,"Thermoanaerobacterium saccharolyticum JW/SL-YS485, complete genome",True
+CP000388,3042615,Bacteria,Paraglaciecola sp. T6c,"Pseudoalteromonas atlantica T6c, complete genome",True
+NZ_QTTZ01000001,69370,Bacteria,Microbacterium trichothecenolyticum,"Microbacterium trichothecenolyticum strain ZKA46 Ga0244590_11, whole genome shotgun sequence",True
+CP031422,82380,Bacteria,Microbacterium oxydans,"Microbacterium oxydans strain HG3 chromosome, complete genome",True
+CP029449,615,Bacteria,Serratia marcescens,"Serratia marcescens strain CAV1761 chromosome, complete genome",True
+CP034692,2497325,Archaea,Halorubrum sp. BOL3-1,"Halorubrum sp. BOL3-1 chromosome, complete genome",True
+CP017101,56730,Bacteria,Rhizobium gallicum,"Rhizobium gallicum strain IE4872, complete sequence",True
+CP012388,96345,Bacteria,Flavobacterium psychrophilum,"Flavobacterium psychrophilum strain Z1, complete genome",True
+CP016193,36809,Bacteria,Mycobacteroides abscessus,"Mycobacteroides abscessus strain FLAC055 chromosome, complete genome",True
+CP014324,1247,Bacteria,Oenococcus oeni,"Oenococcus oeni strain UBOCC-A-315001, complete genome",True
+CP033337,1314,Bacteria,Streptococcus pyogenes,"Streptococcus pyogenes strain TSPY453 chromosome, complete genome",True
+NZ_AGBZ02000001,570509,Bacteria,Spiroplasma melliferum KC3,"Spiroplasma melliferum KC3 contig1, whole genome shotgun sequence",True
+HQ914635,554065,Eukaryota,Chlorella variabilis,"Chlorella variabilis plastid, complete genome",False
+NZ_UGVK01000001,37329,Bacteria,Nocardia farcinica,"Nocardia farcinica strain NCTC630, whole genome shotgun sequence",True
+CP011301,292,Bacteria,Burkholderia cepacia,"Burkholderia cepacia strain LO6, complete genome",True
+CP018657,149539,Bacteria,Salmonella enterica subsp. enterica serovar Enteritidis,"Salmonella enterica subsp. enterica serovar Enteritidis strain 92-0392, complete sequence",True
+NZ_FODB01000001,77097,Bacteria,Vreelandella aquamarina,"Vreelandella aquamarina strain 558, whole genome shotgun sequence",True
+CP002453,688270,Bacteria,Cellulophaga algicola DSM 14237,"Cellulophaga algicola DSM 14237 chromosome, complete genome",True
+NZ_LK391965,1238450,Bacteria,Vibrio nigripulchritudo SOn1,"Vibrio nigripulchritudo SOn1, whole genome shotgun sequence",True
+NZ_CP016896,487316,Bacteria,Acinetobacter soli,"Acinetobacter soli strain GFJ2 chromosome, complete genome",True
+NZ_FLYG01000003,1028490,Bacteria,Lactiplantibacillus pentosus MP-10,"Lactiplantibacillus pentosus MP-10 isolate Alorena table olives, whole genome shotgun sequence",True
+CP014518,37927,Bacteria,Sinomonas atrocyanea,"Sinomonas atrocyanea strain KCTC 3377, complete genome",True
+NZ_CP029604,2055,Bacteria,Gordonia terrae,"Gordonia terrae strain NRRL B-16283 chromosome, complete genome",True
+CP020557,1477,Bacteria,Paenibacillus larvae subsp. pulvifaciens,"Paenibacillus larvae subsp. pulvifaciens strain SAG 10367, complete sequence",True
+NVTK01000009,53249,Bacteria,Pseudoalteromonas sp.,"MAG: Pseudoalteromonas sp. isolate NORP117 Contig_source1383C_385, whole genome shotgun sequence",True
+CP020451,1304,Bacteria,Streptococcus salivarius,"Streptococcus salivarius strain FDAARGOS_259 chromosome, complete genome",True
+NZ_GL545251,440497,Bacteria,Lactobacillus jensenii 1153,"Lactobacillus jensenii 1153 supercont2.1, whole genome shotgun sequence",True
+AP017373,1281486,Bacteria,Lactococcus formosensis,"Lactococcus formosensis DNA, complete genome, strain: 122061",True
+CP021694,584,Bacteria,Proteus mirabilis,"Proteus mirabilis strain AR_0155, complete genome",True
+RXKE01000007,84139,Bacteria,Gordonia sp. (in: high G+C Gram-positive bacteria),"MAG: Gordonia sp. (in: high G+C Gram-positive bacteria) isolate AWTP1-33 sample_33_scaffold_7, whole genome shotgun sequence",True
+CP000830,398580,Bacteria,Dinoroseobacter shibae DFL 12 = DSM 16493,"Dinoroseobacter shibae DFL 12, complete genome",True
+CP014475,1771,Bacteria,Mycolicibacterium phlei,"Mycolicibacterium phlei strain CCUG 21000, complete genome",True
+NZ_NGMG01000001,1352,Bacteria,Enterococcus faecium,"Enterococcus faecium strain 10E2_DIV0373 scaffold00001, whole genome shotgun sequence",True
+NZ_UWXU01000001,573,Bacteria,Klebsiella pneumoniae,"Klebsiella pneumoniae isolate kpneu038, whole genome shotgun sequence",True
+CP027029,1639,Bacteria,Listeria monocytogenes,Listeria monocytogenes strain Lm16 chromosome,True
+CP004046,1232385,Bacteria,[Brevibacterium] flavum ZL-1,"[Brevibacterium] flavum ZL-1, complete genome",True
+CP003876,1133849,Bacteria,Nocardia brasiliensis ATCC 700358,"Nocardia brasiliensis ATCC 700358, complete genome",True
+CP024902,60550,Bacteria,Burkholderia pyrrocinia,"Burkholderia pyrrocinia strain mHSR5 chromosome mHSR5_A, complete sequence",True
+NZ_KN046795,80866,Bacteria,Delftia acidovorans,"Delftia acidovorans strain 2167 scaffold1, whole genome shotgun sequence",True
+CP012831,294,Bacteria,Pseudomonas fluorescens,"Pseudomonas fluorescens strain FW300-N2C3, complete genome",True
+NZ_CP023560,1280,Bacteria,Staphylococcus aureus,Staphylococcus aureus strain NMR08 chromosome,True
+AP017936,1245,Bacteria,Leuconostoc mesenteroides,"Leuconostoc mesenteroides DNA, complete genome, strain: LK-151",True
+CP027116,1408,Bacteria,Bacillus pumilus,"Bacillus pumilus strain 145 chromosome, complete genome",True
+CP000362,375451,Bacteria,Roseobacter denitrificans OCh 114,"Roseobacter denitrificans OCh 114, complete genome",True
+NZ_OCQN01000001,1882786,Bacteria,Streptomyces sp. OK228,"Streptomyces sp. OK228, whole genome shotgun sequence",True
+CP013614,332949,Bacteria,Enterococcus silesiacus,"Enterococcus silesiacus strain LMG 23085, complete genome",True
+NZ_UHDY01000002,214473,Bacteria,Staphylococcus nepalensis,"Staphylococcus nepalensis strain NCTC10516, whole genome shotgun sequence",True
+KP691602,140095,Eukaryota,Dunaliella viridis,"Dunaliella viridis strain CCM-UDEC 002 mitochondrion, complete genome",False
+CP009885,2371,Bacteria,Xylella fastidiosa,"Xylella fastidiosa strain Hib4 chromosome, complete genome",True
+NC_001637,5755,Eukaryota,Acanthamoeba castellanii,"Acanthamoeba castellanii mitochondrion, complete genome",False
+NBSQ01000002,57975,Bacteria,Burkholderia thailandensis,"Burkholderia thailandensis strain FDAARGOS_243 unitig_0_quiver_quiver_pilon, whole genome shotgun sequence",True
+CP025034,2836161,Bacteria,Enterobacter sp. SGAir0187,"Enterobacter sp. SGAir0187 chromosome, complete genome",True
+CP020358,571,Bacteria,Klebsiella oxytoca,"Klebsiella oxytoca strain AR_0147, complete genome",True
+NVUT01000001,239,Bacteria,Flavobacterium sp.,"MAG: Flavobacterium sp. isolate NORP82 Contig_source1382A_55, whole genome shotgun sequence",True
+CP016400,,?,?,,False
+CP032523,624,Bacteria,Shigella sonnei,"Shigella sonnei strain AR_0030 chromosome, complete genome",True
+LC361338,1667,Bacteria,Arthrobacter sp.,"Arthrobacter sp. NHB-10 myd gene for mycodextranase, complete cds",True
+NZ_MIGA01000001,58346,Bacteria,Streptomyces platensis,"Streptomyces platensis strain DSM 40041 contig00001, whole genome shotgun sequence",True
+RKJP01000005,632,Bacteria,Yersinia pestis,"Yersinia pestis strain FDAARGOS_604 unitig_0_quiver_quiver_pilon, whole genome shotgun sequence",True
+NC_014640,762376,Bacteria,Achromobacter xylosoxidans A8,"Achromobacter xylosoxidans A8, complete sequence",True
+NZ_JYNI01000003,485447,Bacteria,Thalassomonas actiniarum,"Thalassomonas actiniarum strain A5K-106 contig_3, whole genome shotgun sequence",True
+CP011458,55601,Bacteria,Vibrio anguillarum,"Vibrio anguillarum strain 4299 chromosome I, partial sequence",True
+NC_012898,44056,Eukaryota,Aureococcus anophagefferens,"Aureococcus anophagefferens chloroplast, complete genome",False
+CP000031,246200,Bacteria,Ruegeria pomeroyi DSS-3,"Ruegeria pomeroyi DSS-3, complete genome",True
+CP001397,592029,Bacteria,Nonlabens dokdonensis DSW-6,"Nonlabens dokdonensis DSW-6, complete genome",True
+AP006716,279808,Bacteria,Staphylococcus haemolyticus JCSC1435,"Staphylococcus haemolyticus JCSC1435 DNA, complete genome",True
+AE000666,187420,Archaea,Methanothermobacter thermautotrophicus str. Delta H,"Methanothermobacter thermautotrophicus str. Delta H, complete genome",True
+CP016224,663,Bacteria,Vibrio alginolyticus,"Vibrio alginolyticus strain ZJ-T chromosome 1, complete sequence",True
+NZ_ADEZ01000001,470735,Bacteria,Brucella inopinata BO1,"Brucella inopinata BO1 chromosome I map unlocalized VBI00041_1, whole genome shotgun sequence",True
+KT970065,1807362,Eukaryota,Tipula cockerelliana,"Tipula cockerelliana mitochondrion, complete genome",False
+CM000736,526989,Bacteria,Bacillus cereus F65185,"Bacillus cereus F65185 chromosome, whole genome shotgun sequence",True
+CP023567,79967,Bacteria,Erwinia pyrifoliae,"Erwinia pyrifoliae strain EpK1/15 chromosome, complete genome",True
+AP017894,1655,Bacteria,Actinomyces naeslundii,"Actinomyces naeslundii DNA, complete genome",True
+AP017605,381,Bacteria,Mesorhizobium loti,"Mesorhizobium loti DNA, nearly complete genome, strain: TONO",True
+FN543502,637910,Bacteria,Citrobacter rodentium ICC168,"Citrobacter rodentium ICC168, complete genome",True
+CP028813,67780,Bacteria,Edwardsiella ictaluri,"Edwardsiella ictaluri strain MS-17-156 chromosome, complete genome",True
+NZ_UFTQ01000001,31943,Bacteria,Brevibacterium iodinum,"Brevibacterium iodinum strain NCTC9742, whole genome shotgun sequence",True
+CP022674,1404,Bacteria,Priestia megaterium,"Priestia megaterium strain SR7 chromosome, complete genome",True
+CP011102,1006155,Bacteria,Paenilisteria weihenstephanensis,"Paenilisteria weihenstephanensis strain WS 4560, complete genome",True
+AP017369,2506452,Bacteria,Corynebacterium suranareeae,"Corynebacterium glutamicum DNA, complete genome, strain: N24",True
+CP012196,824,Bacteria,Campylobacter gracilis,"Campylobacter gracilis strain ATCC 33236, complete genome",True
+CP017605,138072,Bacteria,Candidatus Williamhamiltonella defendens,Candidatus Williamhamiltonella defendens strain NY26 chromosome,True
+NZ_CP029289,41673,Archaea,Acidianus brierleyi,"Acidianus brierleyi strain DSM 1651 chromosome, complete genome",True
+NZ_CM001889,1200984,Bacteria,Streptomyces lividans 1326,"Streptomyces lividans 1326 chromosome, whole genome shotgun sequence",True
+CP019236,1842727,Bacteria,Rhodoferax koreensis,"Rhodoferax koreensis, complete genome",True
+CP002293,581103,Bacteria,Geobacillus sp. Y4.1MC1,"Geobacillus sp. Y4.1MC1, complete genome",True
+CP019892,104336,Bacteria,Microbacterium foliorum,"Microbacterium foliorum strain 122, partial genome",True
+CP034433,2496266,Bacteria,Iodobacter ciconiae,"Iodobacter ciconiae strain H11R3 chromosome, complete genome",True
+CP014861,1648,Bacteria,Erysipelothrix rhusiopathiae,"Erysipelothrix rhusiopathiae strain GXBY-1 chromosome, complete genome",True
+CP003488,1157951,Bacteria,Providencia stuartii MRSN 2154,"Providencia stuartii MRSN 2154, complete genome",True
+CP022426,1324960,Bacteria,Aeromonas salmonicida subsp. pectinolytica 34mel,"Aeromonas salmonicida subsp. pectinolytica 34mel chromosome, complete genome",True
+KY464958,293688,Eukaryota,Apis mellifera lamarckii,"Apis mellifera lamarckii voucher 1842 mitochondrion, complete genome",False
+KU167097,1812852,Eukaryota,Tetraselmis sp. CCMP 881,"Tetraselmis sp. CCMP 881 chloroplast, complete genome",False
+CP020567,1894,Bacteria,Kitasatospora aureofaciens,"Kitasatospora aureofaciens strain DM-1 chromosome, complete genome",True
+CP024679,546,Bacteria,Citrobacter freundii,"Citrobacter freundii strain UMH15 chromosome, complete genome",True
+AP008232,343509,Bacteria,Sodalis glossinidius str. 'morsitans',"Sodalis glossinidius str. 'morsitans' DNA, complete genome",True
+NZ_LT629739,260553,Bacteria,Brevibacterium picturae,Brevibacterium picturae strain DSM 22082 chromosome I,True
+NZ_JNIU01000001,1400525,Bacteria,Candidatus Pelagibacter ubique HTCC7217,"Candidatus Pelagibacter ubique HTCC7217 P773DRAFT_scaffold00001.1_C, whole genome shotgun sequence",True
+CP014201,47715,Bacteria,Lacticaseibacillus rhamnosus,"Lactobacillus rhamnosus strain BFE5264, complete genome",True
+NZ_LT629758,113562,Bacteria,Actinoplanes derwentensis,Actinoplanes derwentensis strain DSM 43941 chromosome I,True
+NZ_KN046823,359391,Bacteria,Brucella abortus 2308,"Brucella abortus 2308 scaffold1, whole genome shotgun sequence",True
+CP014013,518,Bacteria,Bordetella bronchiseptica,"Bordetella bronchiseptica strain FDAARGOS_176, complete genome",True
+NZ_LT571449,1282,Bacteria,Staphylococcus epidermidis,Staphylococcus epidermidis isolate BPH0662 chromosome 1,True
+CP030026,1243609,Bacteria,Salmonella enterica subsp. diarizonae serovar 59:z10:-,Salmonella enterica subsp. diarizonae serovar 59:z10:- strain SA20051472 chromosome,True
+CP012598,108619,Bacteria,Salmonella enterica subsp. enterica serovar Newport,"Salmonella enterica subsp. enterica serovar Newport strain 0211-109, complete genome",True
+CP018032,1275971,Bacteria,Glaesserella parasuis D74,"Glaesserella parasuis D74, complete sequence",True
+NZ_NQJM01000001,552,Bacteria,Erwinia amylovora,"Erwinia amylovora strain RISTBO01-2 tig00000000, whole genome shotgun sequence",True
+NC_010163,441768,Bacteria,Acholeplasma laidlawii PG-8A,"Acholeplasma laidlawii PG-8A, complete sequence",True
+AL645882,100226,Bacteria,Streptomyces coelicolor A3(2),Streptomyces coelicolor A3(2) complete genome,True
+AP012495,1204343,Bacteria,Bacillus subtilis BEST7613,"Bacillus subtilis BEST7613 DNA, complete genome",True
+CP032410,1465,Bacteria,Brevibacillus laterosporus,"Brevibacillus laterosporus strain E7593-50 chromosome, complete genome",True
+NZ_AOLH01000002,1230452,Archaea,Haloferax volcanii DSM 14919,"Haloferax volcanii DSM 14919 contig_2, whole genome shotgun sequence",True
+CP013913,47917,Bacteria,Serratia fonticola,"Serratia fonticola strain GS2, complete genome",True
+CP001404,419942,Archaea,Saccharolobus islandicus Y.N.15.51,"Sulfolobus islandicus Y.N.15.51, complete genome",True
+NZ_PETF01000001,2138,Bacteria,Spiroplasma poulsonii,"Spiroplasma poulsonii strain MSRO-SE SMSE_c001, whole genome shotgun sequence",True
+NZ_FOTC01000001,553466,Archaea,Halogranum rubrum,"Halogranum rubrum strain CGMCC 1.7738, whole genome shotgun sequence",True
+BX950851,218491,Bacteria,Pectobacterium atrosepticum SCRI1043,"Erwinia carotovora subsp. atroseptica SCRI1043, complete genome",True
+CP032627,2419773,Bacteria,Lactococcus allomyrinae,"Lactococcus allomyrinae strain 1JSPR-7 chromosome, complete genome",True
+JTHH01000008,1441,Bacteria,Bacillus thuringiensis serovar morrisoni,"Bacillus thuringiensis serovar morrisoni strain HD 600 BG10.Contig244, whole genome shotgun sequence",True
+CP020809,482462,Bacteria,Mycobacterium dioxanotrophicus,"Mycobacterium dioxanotrophicus strain PH-06 chromosome, complete genome",True
+NZ_HF571038,1193518,Bacteria,Nostocoides jenkinsii Ben 74,"Nostocoides jenkinsii Ben 74, whole genome shotgun sequence",True
+CP004005,1174529,Bacteria,Candidatus Liberibacter asiaticus str. gxpsy,"Candidatus Liberibacter asiaticus str. gxpsy, complete genome",True
+CP014038,669,Bacteria,Vibrio harveyi,"Vibrio harveyi strain FDAARGOS_107 chromosome 1, complete sequence",True
+CP014636,672,Bacteria,Vibrio vulnificus,"Vibrio vulnificus strain CECT 4999 chromosome I, complete sequence",True
+CP006870,1416915,Bacteria,Aeromonas hydrophila NJ-35,"Aeromonas hydrophila NJ-35, complete genome",True
+LN554882,83555,Bacteria,Chlamydia abortus,"Chlamydophila abortus genome assembly CAAB7, chromosome : 1",True
+NZ_CM001149,525370,Bacteria,Prescottella equi ATCC 33707,"Prescottella equi ATCC 33707 chromosome, whole genome shotgun sequence",True
+NZ_QEKR01000001,2488639,Bacteria,Pectobacterium versatile,"Pectobacterium versatile strain WS2152 Ga0215728_11, whole genome shotgun sequence",True
+CP009976,1348584,Bacteria,Cellulophaga baltica 18,"Cellulophaga baltica 18, complete genome",True
+NZ_SAUP01000001,53407,Bacteria,Pseudomonas asplenii,"Pseudomonas asplenii strain ES_PA-E7 Ga0181145_11, whole genome shotgun sequence",True
+NZ_CP018725,925775,Bacteria,Xanthomonas vesicatoria ATCC 35937,"Xanthomonas vesicatoria ATCC 35937 strain LMG911 chromosome, complete genome",True
+CP000628,311403,Bacteria,Rhizobium rhizogenes K84,"Agrobacterium radiobacter K84 chromosome 1, complete sequence",True
+CP009257,470,Bacteria,Acinetobacter baumannii,"Acinetobacter baumannii strain AB030, complete genome",True
+HG530135,1231072,Bacteria,Clostridium tetani 12124569,"Clostridium tetani 12124569 main chromosome, complete genome",True
+NZ_CM002276,1331042,Bacteria,Pasteurella multocida subsp. multocida P1062,"Pasteurella multocida subsp. multocida P1062 chromosome, whole genome shotgun sequence",True
+SDYW01000001,1869227,Bacteria,bacterium,"MAG: bacterium isolate PMG_067 scaffold_117, whole genome shotgun sequence",True
+CP023558,267375,Bacteria,Pseudoalteromonas marina,"Pseudoalteromonas marina strain ECSMB14103 chromosome, complete genome",True
+CP020369,29442,Bacteria,Pseudomonas tolaasii,"Pseudomonas tolaasii strain 2192T, partial genome",True
+NZ_LT897825,1908198,Bacteria,Salinivibrio kushneri,"Salinivibrio kushneri isolate PRJEB21454 scaffold00013, whole genome shotgun sequence",True
+NZ_FOYN01000001,35743,Archaea,Halorubrum sodomense,"Halorubrum sodomense strain RD 26, whole genome shotgun sequence",True
+HG530068,1407059,Bacteria,Pseudomonas aeruginosa PA38182,"Pseudomonas aeruginosa PA38182, complete genome",True
+CM003594,1699621,Bacteria,Psychrobacter sp. P11F6,"Psychrobacter sp. P11F6 chromosome, whole genome shotgun sequence",True
+NZ_LT961733,366649,Bacteria,Xanthomonas citri pv. fuscans,"Xanthomonas citri pv. fuscans strain CFBP6992, whole genome shotgun sequence",True
+NZ_AEUD01000001,644548,Bacteria,Gordonia neofelifaecis NRRL B-59395,"Gordonia neofelifaecis NRRL B-59395 Scaffold1, whole genome shotgun sequence",True
+GG663735,564608,Eukaryota,Micromonas pusilla CCMP1545,"Micromonas pusilla CCMP1545 genomic scaffold MICPUCscaffold_1, whole genome shotgun sequence",False
+LS483339,1308,Bacteria,Streptococcus thermophilus,"Streptococcus thermophilus strain NCTC12958 genome assembly, chromosome: 1",True
+NZ_JXYE01000002,579483,Bacteria,Loktanella sp. S4079,"Loktanella sp. S4079 contig0002, whole genome shotgun sequence",True
+MH286069,300245,Eukaryota,Clostera anastomosis,"Clostera anastomosis mitochondrion, complete genome",False
+NZ_UZVX01000004,152480,Bacteria,Burkholderia ambifaria,"Burkholderia ambifaria strain 3723STDY6145927, whole genome shotgun sequence",True
+NJFC02000001,210,Bacteria,Helicobacter pylori,"Helicobacter pylori strain FDAARGOS_299 scf7180000000006_quiver_pilon, whole genome shotgun sequence",True
+NZ_LFTY01000002,1675527,Bacteria,Candidatus Rhodobacter oscarellae,"Candidatus Rhodobacter oscarellae isolate IGS scaffold2, whole genome shotgun sequence",True
+NZ_KV917376,79879,Bacteria,Evansella clarkii,"Evansella clarkii strain DSM 8720 Scaffold1, whole genome shotgun sequence",True
+NC_002771,272635,Bacteria,Mycoplasmopsis pulmonis UAB CTIP,"Mycoplasmopsis pulmonis UAB CTIP, complete sequence",True
+NZ_UHFO01000001,119602,Bacteria,Streptococcus dysgalactiae subsp. equisimilis,"Streptococcus dysgalactiae subsp. equisimilis strain NCTC11564, whole genome shotgun sequence",True
+CM000737,1405,Bacteria,Bacillus mycoides,"Bacillus mycoides strain AH603 chromosome, whole genome shotgun sequence",True
+CP001751,488538,Bacteria,Candidatus Puniceispirillum marinum IMCC1322,"Candidatus Puniceispirillum marinum IMCC1322 chromosome, complete genome",True
+NZ_UFTK01000001,46503,Bacteria,Parabacteroides merdae,"Parabacteroides merdae strain NCTC13052, whole genome shotgun sequence",True
+CP014567,1290,Bacteria,Staphylococcus hominis,"Staphylococcus hominis strain C34847, complete genome",True
+NZ_UHFW01000006,1313,Bacteria,Streptococcus pneumoniae,"Streptococcus pneumoniae strain NCTC13734, whole genome shotgun sequence",True
+CP017065,1582,Bacteria,Lacticaseibacillus casei,"Lacticaseibacillus casei strain LC5, complete genome",True
+CALB01000097,1208590,Bacteria,Cronobacter turicensis 564,"Cronobacter turicensis 564 WGS project CALB00000000 data, contig Cturicensis_564, whole genome shotgun sequence",True
+QLNP01000098,1665,Bacteria,Arthrobacter globiformis,"Arthrobacter globiformis strain mrc11 337, whole genome shotgun sequence",True
+NZ_GL622183,888049,Bacteria,Streptococcus oralis ATCC 49296,"Streptococcus oralis ATCC 49296 SCAFFOLD1, whole genome shotgun sequence",True
+CP013922,1288,Bacteria,Staphylococcus xylosus,"Staphylococcus xylosus strain S170, complete genome",True
+MTZF01000001,103796,Bacteria,Pseudomonas syringae pv. actinidiae,"Pseudomonas syringae pv. actinidiae strain NZ45 BV361_1, whole genome shotgun sequence",True
+NZ_UGJA01000003,1351,Bacteria,Enterococcus faecalis,"Enterococcus faecalis strain NCTC13779, whole genome shotgun sequence",True
+CP013129,54571,Bacteria,Streptomyces venezuelae,"Streptomyces venezuelae strain ATCC 15439, complete genome",True
+QMJJ01000001,33968,Bacteria,Leuconostoc pseudomesenteroides,"Leuconostoc pseudomesenteroides strain KMB_610 NODE_1_length_515587_cov_101.157, whole genome shotgun sequence",True
+CP026100,1679497,Bacteria,Caulobacter flavus,"Caulobacter flavus strain RHGG3 chromosome, complete genome",True
+NZ_CM001153,909947,Bacteria,Salmonella enterica subsp. enterica serovar Gallinarum str. SG9,"Salmonella enterica subsp. enterica serovar Gallinarum str. SG9 isolate 9 chromosome, whole genome shotgun sequence",True
+CP029620,727,Bacteria,Haemophilus influenzae,"Haemophilus influenzae strain 10P129H1 chromosome, complete genome",True
+NZ_MDHL01000001,33013,Bacteria,Clavibacter michiganensis subsp. michiganensis,"Clavibacter michiganensis subsp. michiganensis strain CAYO001 CMMCAY01_contig000001, whole genome shotgun sequence",True
+PEKX01000007,306,Bacteria,Pseudomonas sp.,"MAG: Pseudomonas sp. isolate EaCA-3 231, whole genome shotgun sequence",True
+EU557093,9739,Eukaryota,Tursiops truncatus,"Tursiops truncatus mitochondrion, complete genome",False
+AF193903,33653,Eukaryota,Cafeteria roenbergensis,"Cafeteria roenbergensis mitochondrial DNA, complete genome",False
+CP032788,1725,Bacteria,Corynebacterium xerosis,"Corynebacterium xerosis strain GS 1 chromosome, complete genome",True
+CP001932,547559,Archaea,Natrialba magadii ATCC 43099,"Natrialba magadii ATCC 43099, complete sequence",True
+JN632628,9927,Eukaryota,Connochaetes taurinus,"Connochaetes taurinus isolate SUN70 mitochondrion, complete genome",False
+CP004014,1276282,Bacteria,Staphylococcus pasteuri SP1,"Staphylococcus pasteuri SP1, complete genome",True
+CP030279,1744,Bacteria,Propionibacterium freudenreichii,"Propionibacterium freudenreichii strain CB129slpB chromosome, complete genome",True
+KC990831,70448,Eukaryota,Ostreococcus tauri,"Ostreococcus tauri chloroplast, complete genome",False
+CP001047,243272,Bacteria,Metamycoplasma arthritidis 158L3-1,"Mycoplasma arthritidis 158L3-1, complete genome",True
+AP014520,1407647,Bacteria,Aggregatibacter actinomycetemcomitans NUM4039,"Aggregatibacter actinomycetemcomitans NUM4039 DNA, complete genome",True
+CP011132,1261127,Bacteria,Citrobacter amalonaticus Y19,"Citrobacter amalonaticus Y19, complete genome",True
+CP016889,549,Bacteria,Pantoea agglomerans,"Pantoea agglomerans strain C410P1, complete sequence",True
+LR134359,32021,Bacteria,Campylobacter jejuni subsp. doylei,"Campylobacter jejuni subsp. doylei strain NCTC11951 genome assembly, chromosome: 1",True
+QBMC01000001,47253,Bacteria,Leptolyngbya foveolarum,"MAG: Leptolyngbya foveolarum isolate ULC129bin1 scaffold1_size77038, whole genome shotgun sequence",True
+CP000967,360094,Bacteria,Xanthomonas oryzae pv. oryzae PXO99A,"Xanthomonas oryzae pv. oryzae PXO99A, complete genome",True
+CP023044,75985,Bacteria,Mannheimia haemolytica,"Mannheimia haemolytica strain 191 chromosome, complete genome",True
+CP007641,1432049,Bacteria,Rhizobium etli bv. phaseoli str. IE4803,"Rhizobium etli bv. phaseoli str. IE4803, complete genome",True
+CP017420,180282,Bacteria,Delftia tsuruhatensis,"Delftia tsuruhatensis strain CM13, complete genome",True
+NZ_LT629770,199592,Bacteria,Microbacterium paraoxydans,Microbacterium paraoxydans strain DSM 15019 chromosome I,True
+CP011256,56448,Bacteria,Xanthomonas arboricola,"Xanthomonas arboricola strain 17, complete genome",True
+NZ_FNOF01000001,28442,Archaea,Haloarcula vallismortis,"Haloarcula vallismortis strain DSM 3756, whole genome shotgun sequence",True
+CP022580,36822,Bacteria,Gordonia rubripertincta,"Gordonia rubripertincta strain CWB2 chromosome, complete genome",True
+CP012648,1302,Bacteria,Streptococcus gordonii,"Streptococcus gordonii strain KCOM 1506 (= ChDC B679), complete genome",True
+NC_011184,388396,Bacteria,Aliivibrio fischeri MJ11,"Aliivibrio fischeri MJ11 chromosome I, complete sequence",True
+CP003563,1185652,Bacteria,Sinorhizobium fredii USDA 257,"Sinorhizobium fredii USDA 257, complete genome",True
+NC_016776,862962,Bacteria,Bacteroides fragilis 638R,"Bacteroides fragilis 638R, complete sequence",True
+NREQ02000002,329,Bacteria,Ralstonia pickettii,"Ralstonia pickettii strain ICMP-8657 scaffold2_size5024906, whole genome shotgun sequence",True
+NZ_KN150939,28450,Bacteria,Burkholderia pseudomallei,"Burkholderia pseudomallei strain BDT scaffold1, whole genome shotgun sequence",True
+MH400164,1931,Bacteria,Streptomyces sp.,"Streptomyces sp. strain SD50 meijiemycin biosynthetic gene cluster, complete sequence",True
+CP000113,246197,Bacteria,Myxococcus xanthus DK 1622,"Myxococcus xanthus DK 1622, complete genome",True
+NZ_JMSZ01000016,267850,Bacteria,Nitrincola lacisaponensis,"Nitrincola lacisaponensis strain 4CA MTCC16316_S1_L001_R1_001_(paired)_contig_5, whole genome shotgun sequence",True
+CP001312,272942,Bacteria,Rhodobacter capsulatus SB 1003,"Rhodobacter capsulatus SB 1003, complete genome",True
+MH202953,7962,Eukaryota,Cyprinus carpio,"Cyprinus carpio mitochondrion, complete genome",False
+CP019668,95486,Bacteria,Burkholderia cenocepacia,"Burkholderia cenocepacia strain VC7848 chromosome, complete genome",True
+AP014565,996633,Bacteria,Salmonella enterica subsp. enterica serovar Typhimurium str. L-3553,"Salmonella enterica subsp. enterica serovar Typhimurium str. L-3553 DNA, complete genome",True
+QOUU01000001,1591,Bacteria,Lactobacillus sp.,"MAG: Lactobacillus sp. isolate LAC1 MaxBin_003_0, whole genome shotgun sequence",True
+NZ_KN150799,550,Bacteria,Enterobacter cloacae,"Enterobacter cloacae strain ATCC 13047 scaffold1, whole genome shotgun sequence",True
+NZ_AOJL01000060,1227466,Archaea,Halorubrum coriense DSM 10284,"Halorubrum coriense DSM 10284 contig_60, whole genome shotgun sequence",True
+CP014617,33894,Bacteria,Mycobacterium tuberculosis variant africanum,Mycobacterium africanum strain UT307 genome,True
+NZ_FNLM01000034,158898,Bacteria,Gordonia westfalica,"Gordonia westfalica strain DSM 44215, whole genome shotgun sequence",True
+NVUC01000001,1903071,Bacteria,Sulfitobacter sp.,"MAG: Sulfitobacter sp. isolate NORP99 Contig_source1383C_1004, whole genome shotgun sequence",True
+MRCG01000001,549789,Bacteria,Phormidium tenue NIES-30,"Phormidium tenue NIES-30 NIES-30_Scaffold_1, whole genome shotgun sequence",True
+AP009552,449447,Bacteria,Microcystis aeruginosa NIES-843,"Microcystis aeruginosa NIES-843 DNA, complete genome",True
+KC900889,33658,Eukaryota,Phaeocystis globosa,"Phaeocystis globosa strain Pg-G(A) chloroplast, complete genome",False
+NZ_BCTM01000001,1218112,Bacteria,Kluyvera cryocrescens NBRC 102467,"Kluyvera cryocrescens NBRC 102467, whole genome shotgun sequence",True
+LR134235,244366,Bacteria,Klebsiella variicola,"Klebsiella variicola strain NCTC9668 genome assembly, chromosome: 1",True
+NZ_CDQJ01000001,305,Bacteria,Ralstonia solanacearum,"Ralstonia solanacearum strain CFBP3858, whole genome shotgun sequence",True
+CP023483,2756,Bacteria,Brochothrix thermosphacta,"Brochothrix thermosphacta strain BI chromosome, complete genome",True
+MH841968,9940,Eukaryota,Ovis aries,"Ovis aries mitochondrion, complete genome",False
+CP023315,155892,Bacteria,Caulobacter vibrioides,"Caulobacter vibrioides strain CB13b1a chromosome, complete genome",True
+CP029760,34085,Bacteria,Riemerella anatipestifer,"Riemerella anatipestifer strain RCAD0133 chromosome, complete genome",True
+CP018363,439334,Bacteria,Mycobacterium avium subsp. hominissuis,"Mycobacterium avium subsp. hominissuis strain H87 chromosome, complete genome",True
+NZ_LR215978,435591,Bacteria,Parabacteroides distasonis ATCC 8503,Parabacteroides distasonis ATCC 8503 isolate Parabacteroides distasonis 82G9 chromosome 1,True
+CP026337,29459,Bacteria,Brucella melitensis,"Brucella melitensis strain CIT43 chromosome, complete genome",True
+CP024710,1089444,Bacteria,Dickeya solani,"Dickeya solani strain IFB0223 chromosome, complete genome",True
+NZ_ALPT02000001,1218173,Bacteria,Alkalihalobacillus alcalophilus ATCC 27647 = CGMCC 1.3604,"Alkalihalobacillus alcalophilus ATCC 27647 = CGMCC 1.3604 strain AV1934 contig00001, whole genome shotgun sequence",True
+NZ_CCKZ01000001,54388,Bacteria,Salmonella enterica subsp. enterica serovar Paratyphi A,"Salmonella enterica subsp. enterica serovar Paratyphi A, whole genome shotgun sequence",True
+NZ_CM007353,1449093,Bacteria,Lactococcus cremoris subsp. cremoris IBB477,"Lactococcus cremoris subsp. cremoris IBB477 chromosome, whole genome shotgun sequence",True
+NZ_KV917375,79882,Bacteria,Sutcliffiella halmapala,"Sutcliffiella halmapala strain DSM 8723 Scaffold1, whole genome shotgun sequence",True
+NC_007288,2903,Eukaryota,Emiliania huxleyi,"Emiliania huxleyi chloroplast, complete genome",False
+RKIY01000003,1409,Bacteria,Bacillus sp. (in: firmicutes),"Bacillus sp. (in: firmicutes) strain FDAARGOS_509 unitig_0_quiver_quiver_pilon, whole genome shotgun sequence",True
+NZ_FNSA01000003,57704,Bacteria,Tsukamurella tyrosinosolvens,"Tsukamurella tyrosinosolvens strain DSM 44234, whole genome shotgun sequence",True
+CP013197,2133,Bacteria,Spiroplasma citri,"Spiroplasma citri strain R8-A2, complete sequence",True
+AP018216,1973479,Bacteria,Trichormus variabilis NIES-23,"Trichormus variabilis NIES-23 DNA, nearly complete genome",True
+CP014326,28037,Bacteria,Streptococcus mitis,"Streptococcus mitis strain SVGS_061, complete genome",True
+NZ_AOLS01000062,662475,Archaea,Haloarcula marismortui ATCC 33799,"Haloarcula marismortui ATCC 33799 contig_62, whole genome shotgun sequence",True
+CP009902,1392,Bacteria,Bacillus anthracis,"Bacillus anthracis strain 2002013094, complete genome",True
+SIMC01000001,2081791,Bacteria,Rhizobium ruizarguesonis,"Rhizobium ruizarguesonis strain SM77 chrom_SM77, whole genome shotgun sequence",True
+NZ_BAFC01000022,1089453,Bacteria,Gordonia sputi NBRC 100414,"Gordonia sputi NBRC 100414, whole genome shotgun sequence",True
+MTKC01000003,146922,Bacteria,Streptomyces griseofuscus,"Streptomyces griseofuscus strain NG1-7 NG1-17_1_1, whole genome shotgun sequence",True
+CP029897,90370,Bacteria,Salmonella enterica subsp. enterica serovar Typhi,"Salmonella enterica subsp. enterica serovar Typhi strain 343077_213147 chromosome, complete genome",True
+CP002815,1031709,Bacteria,Cutibacterium acnes 6609,"Propionibacterium acnes 6609, complete genome",True
+NZ_KE356190,1112251,Bacteria,Chlamydia psittaci 99DC5,"Chlamydia psittaci 99DC5 CP_99DC5.contig.63, whole genome shotgun sequence",True
+NZ_JYBP01000003,1462,Bacteria,Geobacillus kaustophilus,"Geobacillus kaustophilus strain Et7/4 LG52.Contig26, whole genome shotgun sequence",True
+CP005486,1597,Bacteria,Lacticaseibacillus paracasei,"Lactobacillus paracasei strain LOCK919, complete genome",True
+HF571988,1262462,Bacteria,Yersinia enterocolitica (type O:5) str. YE53/03,Yersinia enterocolitica (type O:5) YE53/03 complete genome,True
+CP031023,29397,Bacteria,Lactobacillus delbrueckii subsp. lactis,"MAG: Lactobacillus delbrueckii subsp. lactis isolate NWC_2_2 chromosome, complete genome",True
+NZ_AOLR01000018,662476,Archaea,Haloarcula marismortui ATCC 33800,"Haloarcula marismortui ATCC 33800 contig_18, whole genome shotgun sequence",True
+NC_001700,9685,Eukaryota,Felis catus,"Felis catus mitochondrion, complete genome",False
+AP014630,106649,Bacteria,Acinetobacter guillouiae,"Acinetobacter guillouiae DNA, complete geonome, strain: NBRC 110550",True
+CP019576,1502,Bacteria,Clostridium perfringens,"Clostridium perfringens strain Del1, complete sequence",True
+NZ_MSEI01000003,1929465,Bacteria,Idiomarina sp. 5.13,"Idiomarina sp. 5.13 contig_03, whole genome shotgun sequence",True
+BA000030,227882,Bacteria,Streptomyces avermitilis MA-4680 = NBRC 14893,"Streptomyces avermitilis MA-4680 = NBRC 14893 DNA, complete genome",True
+CP001713,406984,Bacteria,Chlamydia pneumoniae LPCoLN,"Chlamydophila pneumoniae LPCoLN, complete genome",True
+NZ_DF968533,146537,Bacteria,Streptomyces azureus,"Streptomyces azureus strain ATCC 14921, whole genome shotgun sequence",True
+NZ_CP023484,2037915,Bacteria,Dickeya sp. Secpp 1600,"Dickeya sp. Secpp 1600 chromosome, complete genome",True
+NZ_AEUT02000001,873447,Bacteria,Streptococcus parauberis NCFD 2020,"Streptococcus parauberis NCFD 2020 chromosome, whole genome shotgun sequence",True
+NZ_GG657757,591159,Bacteria,Streptomyces viridochromogenes DSM 40736,"Streptomyces viridochromogenes DSM 40736 supercont1.1, whole genome shotgun sequence",True
+FN554889,680198,Bacteria,Streptomyces scabiei 87.22,Streptomyces scabiei 87.22 complete genome,True
+CP021427,1596,Bacteria,Lactobacillus gasseri,"Lactobacillus gasseri strain 4M13, complete genome",True
